@@ -205,7 +205,7 @@ button:active:not(:disabled){transform:scale(.96);filter:brightness(.9)}
   <div id="adminBar">
     <div class="row" style="justify-content:space-between"><b style="flex:0 0 auto">🔧 관리자 모드</b><span class="muted" style="color:#cbb8ff;flex:0 0 auto" id="abWho"></span><button style="flex:0 0 auto" onclick="toggleAdminBar()">접기</button></div>
     <div class="ab" id="abBody">
-      <select id="abLevel"><option value="1">레벨 1</option><option value="2">레벨 2</option><option value="3">레벨 3</option><option value="4">레벨 4</option><option value="5">레벨 5</option></select>
+      <select id="abLevel"><option value="1">레벨 1</option><option value="2">레벨 2</option><option value="3">레벨 3</option><option value="4">레벨 4</option><option value="5">레벨 5</option><option value="6">토익 1</option><option value="7">토익 2</option><option value="8">토익 3</option></select>
       <button onclick="adminOp('level')">레벨 이동</button>
       <button onclick="adminOp('stage')">단계 넘김</button>
       <button onclick="adminOp('levelpass')">레벨 통과</button>
@@ -221,6 +221,7 @@ button:active:not(:disabled){transform:scale(.96);filter:brightness(.9)}
     <div class="top">
       <h1 style="margin:0">🍎 영공도전</h1>
       <div class="row" style="flex:0 0 auto;gap:6px">
+        <button class="chip spdBtn" onclick="cycleSpeed()" style="white-space:nowrap">🐢</button>
         <button class="chip" onclick="openSettings()" id="nameChip">👤</button>
         <span class="chip" id="streakChip">🔥 0</span>
       </div>
@@ -261,7 +262,7 @@ button:active:not(:disabled){transform:scale(.96);filter:brightness(.9)}
 
   <!-- 📒 단어장 -->
   <div class="tab" id="tabWords">
-    <h1>📒 단어장</h1>
+    <div class="row" style="justify-content:space-between;align-items:center"><h1 style="margin:0">📒 단어장</h1><button class="chip spdBtn" onclick="cycleSpeed()" style="flex:0 0 auto;white-space:nowrap">🐢</button></div>
     <div class="chips" id="wordChips"></div>
     <p class="muted" id="wordHelp">⭐ 를 누르면 다음 학습에 먼저 나와요 (학습 추가)</p>
     <div class="card" id="wordList"></div>
@@ -280,14 +281,14 @@ button:active:not(:disabled){transform:scale(.96);filter:brightness(.9)}
 
 <!-- 문제 화면 (학습·진단·테스트 같이 씀) -->
 <div class="scr" id="quiz">
-  <div class="qhead"><button class="qx" onclick="quitQuiz()">✕</button><div class="bar"><i id="qBar"></i></div><span id="qScore"></span><span class="muted" id="qCount"></span></div>
+  <div class="qhead"><button class="qx" onclick="quitQuiz()">✕</button><div class="bar"><i id="qBar"></i></div><span id="qScore"></span><button class="chip spdBtn" onclick="cycleSpeed()" style="padding:4px 8px;white-space:nowrap">🐢</button><span class="muted" id="qCount"></span></div>
   <div class="tbar" id="qTimerWrap" style="display:none"><i id="qTimer"></i></div>
   <div id="qArea"></div>
 </div>
 
 <!-- 사과 게임 -->
 <div class="scr" id="game">
-  <div id="hud"><span id="hudLife">❤️❤️❤️</span><span id="hudProg">1/15</span><span id="hudScore">0점</span></div>
+  <div id="hud"><span id="hudLife">❤️❤️❤️</span><span id="hudProg">1/15</span><span id="hudScore">0점</span><button class="chip spdBtn" onclick="cycleSpeed()" style="padding:2px 8px;white-space:nowrap">🐢</button></div>
   <div id="field"></div>
   <div id="gFlash"></div>
   <div id="ground"></div>
@@ -363,7 +364,7 @@ button:active:not(:disabled){transform:scale(.96);filter:brightness(.9)}
   <div class="card"><b>🔊 영어 목소리</b>
     <p class="muted">목소리를 고르고 ▶ 로 들어 보세요. 고른 목소리로 앱 전체가 읽어 줘요.</p>
     <select id="ckVoice" onchange="pickUserVoice()"></select>
-    <div class="row" style="margin-top:8px"><span class="muted" style="flex:0 0 auto">속도</span><input id="ckRate" type="range" min="0.6" max="1.2" step="0.05" style="padding:0;margin:0" oninput="setRate(this.value)"><b id="ckRateTxt" style="flex:0 0 40px"></b></div>
+    <p class="muted" style="margin:8px 0 4px">읽기 속도</p><div class="spdBox" id="ckSpd"></div>
     <div class="row"><button class="btn small" onclick="testSay('egg')">▶ egg</button><button class="btn small" onclick="testSay('ant')">▶ ant</button><button class="btn small" onclick="testSay('The rabbit eats a carrot.')">▶ 문장</button></div>
   </div>
   <div class="card"><b>🎚 마이크 소리 크기</b>
@@ -399,7 +400,10 @@ button:active:not(:disabled){transform:scale(.96);filter:brightness(.9)}
 <script>
 /***************************************************************
  * 영공도전_jw 앱 화면
- * VERSION 2.3   [v2.3] 🩺 점검 화면(마이크 게이지·인식 시험·목소리 고르기·서버 속도), 점검 기록 자동 전송,
+ * VERSION 2.5   [v2.5] 읽기 속도 와이퍼식 버튼(누를 때마다 보통→천천히→…→아주 천천히→…→빠르게 왔다 갔다, 사람마다 저장, 바로 다시 읽기), 게임: 틀린 단어 더 자주 + 게임 틀리면 ⭐,
+ *                      텔레그램·카톡 안 창 소리 안 남 안내 + 크롬으로 열기, 단어 은행 폰에 저장(켜는 속도), 서버 시간 기록
+ *               [v2.4] 💼 토익 코스(토익 1~3) + 공부 모드 고르기(⚙️ 설정, 아빠 화면), 레벨 이름 표시(토익 1 등)
+ *               [v2.3] 🩺 점검 화면(마이크 게이지·인식 시험·목소리 고르기·서버 속도), 점검 기록 자동 전송,
  *                      인식 중 글자 표시·오류 이름 표시, 비슷한 발음 '거의 맞음', 읽기 속도 1.0
  *               [v2.2] 모르겠어요 버튼, 레벨테스트 바로 채점, 눌림·소리·진동, 자동 다크 끄기, 기다림 줄이기, 그림 힌트 빼기
  *               [v2.1] 화면마다 탭 이름·아이콘 다르게 (아빠 화면 / 사용자 화면)
@@ -408,12 +412,12 @@ button:active:not(:disabled){transform:scale(.96);filter:brightness(.9)}
  ***************************************************************/
 
 // ===================== 조절할 값 =====================
-const VERSION = '2.3';            // 앱 화면 버전
+const VERSION = '2.5';            // 앱 화면 버전
 const LOG_ON = true;              // [v2.3] 점검 기록(마이크·목소리·오류)을 서버 '점검기록' 시트로 보냄 (false면 끔)
 const LOG_SEND_SEC = 30;          // [v2.3] 점검 기록을 모아서 보내는 간격(초)
 const CLOSE_MATCH_ON = true;      // [v2.3] 비슷한 발음(한 글자 차이, 예: ant↔and)도 "거의 맞음"으로 통과
 const MIC_TEST_SEC = 5;           // [v2.3] 점검 화면 마이크 소리 크기 재는 시간(초)
-const SLOW_API_MS = 3000;         // [v2.3] 서버 대답이 이보다 늦으면 점검 기록에 남김
+const SLOW_API_MS = 1500;         // [v2.5] 서버 대답이 이보다 늦으면 점검 기록에 남김 (서버 안 시간도 같이)
 const SOUND_ON = true;            // [v2.2] 맞음 딩동 / 틀림 삑 소리 (false면 끔)
 const VIBRATE_ON = true;          // [v2.2] 누를 때 진동 (갤럭시만, 아이폰은 웹에서 진동 안 됨)
 const TEST_NEXT_MS = 800;         // [v2.2] 레벨테스트에서 ⭕/❌ 보여 주고 다음 문제로 넘어가는 시간
@@ -431,7 +435,10 @@ const LIVES = 3;                  // 사과 게임 목숨
 const FALL_START_SEC = 8;         // 사과가 땅까지 떨어지는 시간(초) — 처음
 const FALL_MIN_SEC = 4;           // 가장 빠를 때(초)
 const FALL_STEP_SEC = 0.3;        // 연속으로 맞힐 때마다 빨라지는 정도(초)
-const SPEECH_RATE = 1.0;          // [v2.3] 영어 읽어주는 기본 속도 (1이 보통, 점검 화면에서 바꿀 수 있음)
+const SPEED_STEPS = [1.0, 0.85, 0.7, 0.6, 0.5];   // [v2.5] 읽기 속도 ①~⑤ 값 (1이 보통 사람 말 빠르기, 작을수록 느림)
+const SPEED_NAME = ['빠르게', '보통', '천천히', '더 천천히', '아주 천천히'];   // [v2.5] 각 단계 이름
+const SPEED_DEFAULT = 2;           // [v2.5] 처음 속도 단계 (2 = 보통)
+const GAME_WRONG_WEIGHT = 2;       // [v2.5] 오늘 틀린 단어가 게임에 나오는 배수 (2 = 두 배 자주)
 const TEASER_MIN_SEC = 90;        // 이벤트 예약 중 티저 문구 간격 — 최소(초)
 const TEASER_MAX_SEC = 220;       // 티저 문구 간격 — 최대(초)
 const DAD_REFRESH_SEC = 15;       // 아빠 화면 자동 새로고침(초)
@@ -515,7 +522,7 @@ async function api(action, data, opt){
     const r = await fetch(SERVER, {method:'POST', body: JSON.stringify(body)});   // text/plain으로 가서 추가 확인 요청 없이 바로 가요
     const j = await r.json();
     const ms = Date.now() - t0;
-    if(ms > SLOW_API_MS && action !== 'devlog') dlog('slow', action+' '+ms+'ms');   // [v2.3]
+    if(ms > SLOW_API_MS && action !== 'devlog') dlog('slow', action+' '+ms+'ms (서버 안 '+(j.ms==null?'?':j.ms)+'ms)');   // [v2.5] 서버 안 시간과 비교
     if(!j.ok){ if(action !== 'devlog' && !(j.pinError)) dlog('api-error', action+': '+(j.msg||'')); throw Object.assign(new Error(j.msg||'오류'), {res:j}); }
     return j;
   } finally {
@@ -581,8 +588,34 @@ function pickVoice(){
   }catch(e){}
 }
 try{ speechSynthesis.onvoiceschanged = pickVoice; pickVoice(); }catch(e){}
-function speechRate(){ const r = parseFloat(sget('yg_rate')); return r >= 0.5 && r <= 1.5 ? r : SPEECH_RATE; }
+/* [v2.5] 읽기 속도 — 사람마다 서버에 저장 (등록 전에는 폰에). d = 다음에 누르면 갈 방향 (1 느리게, -1 빠르게) */
+function speedState(){
+  if(ST && ST.speed && ST.speed.n) return ST.speed;
+  const n = parseInt(sget('yg_spd')); const d = parseInt(sget('yg_spd_d'));
+  return { n: n >= 1 && n <= SPEED_STEPS.length ? n : SPEED_DEFAULT, d: d === -1 ? -1 : 1 };
+}
+function speedStep(){ return speedState().n; }
+function speechRate(){ return SPEED_STEPS[speedStep()-1]; }
+function speedLabel(){ const s = speedState(); return '🐢 ' + SPEED_NAME[s.n-1] + ' ' + (s.d > 0 ? '▼' : '▲'); }
+function spdBtnHTML(extra){ return `<button class="chip spdBtn" onclick="cycleSpeed()" style="padding:4px 10px;white-space:nowrap${extra||''}">${speedLabel()}</button>`; }
+function refreshSpeedUI(){ document.querySelectorAll('.spdBtn').forEach(b=>b.textContent = speedLabel()); const ck = document.getElementById('ckSpd'); if(ck && ck.offsetParent) ck.innerHTML = speedButtons(); }
+function saveSpeed(n, d){
+  const max = SPEED_STEPS.length;
+  if(n >= max) d = -1; if(n <= 1) d = 1;   // 끝에 닿으면 방향을 바꿔요 (와이퍼처럼)
+  if(ST){ ST.speed = {n, d}; api('setSpeed', {n, d}, {quiet:true}).catch(()=>{}); }
+  sset('yg_spd', n); sset('yg_spd_d', d);
+  dlog('tts-speed', {step:n, rate:SPEED_STEPS[n-1]});
+  refreshSpeedUI();
+  say(LAST_SAY || 'apple');   // 지금 단어를 바뀐 속도로 바로 다시 읽어요
+}
+/* 누를 때마다 한 칸씩: 보통→천천히→더 천천히→아주 천천히→더 천천히→…→빠르게→보통→… */
+function cycleSpeed(){ const s = speedState(); saveSpeed(s.n + s.d, s.d); }
+/* 점검 화면용: 원하는 칸 바로 고르기 */
+function speedButtons(){ return `<div class="row" style="flex-wrap:wrap;gap:6px">${SPEED_STEPS.map((v,i)=>`<button class="btn small ${i+1===speedStep()?'':'gray'}" style="flex:1 1 18%;padding:10px 0;font-size:13px" onclick="setSpeed(${i+1})">${SPEED_NAME[i]}</button>`).join('')}</div>`; }
+function setSpeed(n){ const s = speedState(); saveSpeed(n, n > s.n ? 1 : n < s.n ? -1 : s.d); }
+let LAST_SAY = '';
 function say(text){
+  LAST_SAY = text;   // [v2.5] 속도 바꿀 때 다시 읽으려고 기억
   try{
     if(!enVoice) pickVoice();
     speechSynthesis.cancel();
@@ -682,6 +715,24 @@ function devInfo(){
     recog: recogOK(), tts: 'speechSynthesis' in window, voices: enVoices().length, app: VERSION };
 }
 
+/* [v2.5] 텔레그램·카톡 안 창(웹뷰)은 읽어 주기가 없어요 → 크롬으로 열기 안내 */
+function inWebView(){ return !('speechSynthesis' in window); }   // 읽어 주기 기능이 아예 없는 창만 (아이폰 카톡은 소리 잘 남)
+function openInBrowserUrl(){
+  const q = '?s=' + encodeURIComponent(SERVER);
+  if(/Android/i.test(navigator.userAgent)) return 'intent://' + location.host + location.pathname + q + '#Intent;scheme=https;package=com.android.chrome;end';
+  return location.origin + location.pathname + q;
+}
+function webviewNotice(){
+  if(!inWebView()) return;
+  sset('yg_wv_seen', '1');
+  modal(`<div style="font-size:48px">🔇</div><h2>이 창에서는 소리가 안 나요</h2>
+    <p class="muted">이 창(텔레그램 안 등)은 영어를 읽어 주는 기능이 없어요.<br>크롬이나 삼성 인터넷으로 열어 주세요.</p>
+    <a class="btn" style="text-align:center;text-decoration:none" href="${openInBrowserUrl()}" onclick="dlog('webview-open','')">🌐 크롬으로 열기</a>
+    <p class="muted">안 되면 오른쪽 위 ⋮ → "다른 브라우저로 열기"를 눌러요.</p>
+    <button class="btn gray" onclick="closeModal()">그냥 쓸게요</button>`);
+  dlog('webview', navigator.userAgent.slice(0,120));
+}
+
 /* ---------- 🩺 점검 화면 ---------- */
 let CHECK_BACK = null, micStream = null, micTimer = null;
 function openCheck(fromQuiz){
@@ -697,7 +748,7 @@ function openCheck(fromQuiz){
     ['음성 인식 기능', i.recog ? '있음' : '없음 (말하기 문제는 듣고 고르기로 바뀜)'], ['영어 목소리 수', i.voices + '개']
   ].map(([k,v])=>`<div class="kv"><span>${k}</span><b>${esc(v)}</b></div>`).join('');
   fillVoices();
-  const r = speechRate(); document.getElementById('ckRate').value = r; document.getElementById('ckRateTxt').textContent = r.toFixed(2);
+  document.getElementById('ckSpd').innerHTML = speedButtons();   // [v2.5]
   window.scrollTo(0,0);
 }
 function closeCheck(){ micLevelStop(); stopMic(); flushLog(); if(CHECK_BACK==='quiz' && Q) go('quiz'); else if(CHECK_BACK==='dad') go('dad'); else if(ST) enterMain(); else go('reg'); }
@@ -707,7 +758,7 @@ function fillVoices(){
   sel.innerHTML = vs.map(v=>`<option value="${esc(v.name)}" ${enVoice && enVoice.name===v.name ? 'selected' : ''}>${esc(v.name)} · ${esc(v.lang)}${v.localService ? '' : ' (인터넷)'}</option>`).join('');
 }
 function pickUserVoice(){ const n = document.getElementById('ckVoice').value; sset('yg_voice', n); pickVoice(); dlog('tts-pick', n); testSay('egg'); }
-function setRate(v){ sset('yg_rate', v); document.getElementById('ckRateTxt').textContent = Number(v).toFixed(2); }
+
 function testSay(t){ dlog('tts-test', {text: t, voice: enVoice ? enVoice.name : '없음', rate: speechRate()}); say(t); }
 async function micLevelTest(){
   const btn = document.getElementById('ckMicBtn'), txt = document.getElementById('ckMicTxt'), bar = document.getElementById('ckMeter');
@@ -775,6 +826,8 @@ function readHash(){
   // #dad , #dad&s=서버주소 , #s=서버주소
   const h = decodeURIComponent(location.hash.slice(1));
   let isDad = false;
+  const qs = new URLSearchParams(location.search).get('s');   // [v2.5] 크롬으로 열기 링크(?s=서버주소)
+  if(qs && /^https:\/\/script\.google\.com\//.test(qs)){ sset('yg_server', qs); history.replaceState(null,'', location.pathname + location.hash); }
   h.split('&').forEach(p=>{
     if(p==='dad') isDad = true;
     if(p.indexOf('s=')===0){ const u = p.slice(2); if(/^https:\/\/script\.google\.com\//.test(u)) sset('yg_server', u); }
@@ -791,10 +844,15 @@ async function boot(){
   UID = sget('yg_uid');
   if(!UID){ showReg(); return; }
   try{
-    const j = await api('init');
+    let keep = null; try{ keep = JSON.parse(localStorage.getItem('yg_bank')||'null'); }catch(e){}
+    const j = await api('init', keep && keep.ver ? {bankVer: keep.ver} : {});   // [v2.5] 같은 단어 은행이면 서버가 안 보내요
+    if(j.bank){ try{ localStorage.setItem('yg_bank', JSON.stringify({ver:j.bankVer, bank:j.bank})); }catch(e){} }
+    else if(keep && keep.bank) j.bank = keep.bank;
+    else { try{ localStorage.removeItem('yg_bank'); }catch(e){} location.reload(); return; }
     ST = j; BANK = j.bank; WMAP = {};
     setTab(TITLE_KID + ' · ' + ST.name, '🍎');   // [v2.1]
     dlog('boot', devInfo());   // [v2.3]
+    setTimeout(webviewNotice, 800);   // [v2.5]
     BANK.forEach(L=>L.stages.forEach(st=>st.words.forEach(w=>{ w.lv = L.lv; w.phonics = L.phonics; WMAP[w.id] = w; })));
     document.getElementById('verLine').textContent = '앱 v'+VERSION+' · 서버 v'+j.version;
     clearInterval(beatTimer); beatTimer = setInterval(beat, BEAT_SEC*1000);
@@ -857,7 +915,7 @@ async function skipDiag(){
 /* =============================================================
  *  메인 화면
  * ============================================================= */
-function enterMain(){ go('main'); renderAdminBar(); showTab(sget('yg_tab') || 'tabStudy'); }
+function enterMain(){ go('main'); renderAdminBar(); showTab(sget('yg_tab') || 'tabStudy'); refreshSpeedUI(); }
 function showTab(t){
   sset('yg_tab', t);
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on', x.id===t));
@@ -869,6 +927,9 @@ function showTab(t){
   window.scrollTo(0,0);
 }
 function curLv(){ return ST.levels[ST.level-1]; }
+/* [v2.4] 레벨 이름 (레벨 3 / 토익 1) */
+function LV(lv, levels){ const l = (levels || (ST && ST.levels) || [])[lv-1]; return l && l.label ? l.label : '레벨 '+lv; }
+function myLevels(levels, courses){ return levels.filter(l=>(courses || ST.courses || ['daily']).indexOf(l.course || 'daily') >= 0); }
 
 function renderHome(){
   document.getElementById('nameChip').textContent = '👤 '+ST.name;
@@ -882,24 +943,24 @@ function renderHome(){
   sb.className = 'btn' + (done ? ' green' : '');
   sb.onclick = ()=>startStudy(done);
   const L = curLv();
-  document.getElementById('boardTitle').textContent = '🧩 레벨 '+L.lv+' 그림판';
+  document.getElementById('boardTitle').textContent = '🧩 '+LV(L.lv)+' 그림판';
   document.getElementById('boardCount').textContent = '조각 '+L.board.opened.length+' / '+L.board.pieces;
   document.getElementById('boardHome').innerHTML = boardHTML(L.board);
-  document.getElementById('stageTitle').textContent = '레벨 '+L.lv+' · '+L.name+' 단계';
+  document.getElementById('stageTitle').textContent = LV(L.lv)+' · '+L.name+' 단계';
   document.getElementById('stageList').innerHTML = L.stages.map((s,i)=>
     `<div class="stg"><span>${s.open?'✅':'🧩'} ${i+1}. ${esc(s.name)}</span><span class="muted">외움 ${s.learned}/${s.total}</span></div>`).join('');
   let t = '';
   if(L.passed) t = '<p class="muted">레벨테스트 통과 완료!</p>';
   else if(!L.board.done) t = `<button class="btn gray small" disabled>📝 레벨테스트 (그림판 조각을 다 열면 열려요)</button>`;
   else if(L.waitMin) t = `<button class="btn gray small" disabled>📝 레벨테스트 · ${fmtWait(L.waitMin)} 뒤 다시 도전</button>`;
-  else t = `<button class="btn small" onclick="confirmTest(${L.lv})">📝 레벨 ${L.lv} 테스트 도전! (통과하면 다음 레벨)</button>`;
+  else t = `<button class="btn small" onclick="confirmTest(${L.lv})">📝 ${LV(L.lv)} 테스트 도전! (통과하면 다음 레벨)</button>`;
   document.getElementById('testArea').innerHTML = t;
-  document.getElementById('levelList').innerHTML = ST.levels.map(l=>
-    `<div class="lvrow ${l.open?'':'lock'}"><div class="top"><span>${l.passed?'🏆':l.open?'🔓':'🔒'} 레벨 ${l.lv} · ${esc(l.name)}</span><span class="muted">외움 ${l.learned}/${l.total}</span></div></div>`).join('');
+  document.getElementById('levelList').innerHTML = `<p class="muted" style="margin:4px 0">공부 모드: <b>${esc((ST.modes||{})[ST.mode]||'')}</b> <button class="chip" onclick="openSettings()">바꾸기</button></p>` + myLevels(ST.levels).map(l=>   // [v2.4]
+    `<div class="lvrow ${l.open?'':'lock'}"><div class="top"><span>${l.passed?'🏆':l.open?'🔓':'🔒'} ${LV(l.lv)} · ${esc(l.name)}</span><span class="muted">외움 ${l.learned}/${l.total}</span></div></div>`).join('');
 }
 function openBoardModal(lv){
   const L = ST.levels[lv-1];
-  modal(`<h2>🧩 레벨 ${lv} 그림판</h2>${boardHTML(L.board)}
+  modal(`<h2>🧩 ${LV(lv)} 그림판</h2>${boardHTML(L.board)}
     <p class="muted">조각 ${L.board.opened.length} / ${L.board.pieces} · ${L.board.done ? (L.board.prize ? '완성!' : '다 열었어요!') : '뭐가 숨어 있을까요?'}</p>
     <button class="btn" onclick="closeModal()">닫기</button>`);
 }
@@ -909,6 +970,8 @@ function openSettings(){
   modal(`<h2>⚙️ 설정</h2><p style="margin:4px 0"><b>👤 ${esc(ST.name)}</b></p>
     <p class="muted">하루 공부량 (문제 수)</p>
     <div class="row" style="flex-wrap:wrap">${ST.goalChoices.map(g=>`<button class="btn small ${g===ST.goal?'':'gray'}" style="flex:0 0 30%" onclick="setGoal(${g})">${g}</button>`).join('')}</div>
+    <p class="muted">공부 모드</p>
+    <div class="row" style="flex-wrap:wrap">${Object.keys(ST.modes||{}).map(m=>`<button class="btn small ${m===ST.mode?'':'gray'}" style="flex:1 1 30%" onclick="setMode('${m}')">${esc(ST.modes[m])}</button>`).join('')}</div>
     <button class="btn gray small" onclick="switchUser()">👥 다른 사람으로 바꾸기</button>
     <button class="btn gray small" onclick="closeModal();openCheck()">🩺 점검 (소리·마이크 문제 찾기)</button>
     <button class="btn" onclick="closeModal()">닫기</button>
@@ -919,6 +982,13 @@ function setGoal(g){   // [v2.2] 누르는 즉시 바뀌고, 저장은 뒤에서
   ST.goal = g; closeModal(); renderHome(); toast('하루 '+g+'문제로 바꿨어요');
   api('setGoal',{goal:g},{quiet:true}).then(j=>{ ST = Object.assign(ST, j); if(document.getElementById('tabStudy').classList.contains('on')) renderHome(); })
     .catch(e=>{ ST.goal = old; renderHome(); toast('저장 실패: '+e.message); });
+}
+
+/* [v2.4] 공부 모드 바꾸기 */
+async function setMode(m){
+  closeModal();
+  try{ const j = await api('setMode', {mode:m}); ST = Object.assign(ST, j); renderAdminBar(); showTab('tabStudy'); toast('공부 모드: '+esc(ST.modes[m])); }
+  catch(e){ toast('저장 실패: '+e.message); }
 }
 
 /* =============================================================
@@ -936,6 +1006,7 @@ function startQuiz(mode, qs, extra){
   Q = Object.assign({mode, qs, i:-1, results:[], answers:[], pending:[], pieces:[], right:0, tRight:0, tWrong:0, timer:0, lock:false, flushing:Promise.resolve()}, extra||{});
   document.getElementById('qScore').innerHTML = mode==='test' ? '<span style="color:var(--ok)">⭕ 0</span> <span style="color:var(--bad)">❌ 0</span>' : '';   // [v2.2]
   document.getElementById('qTimerWrap').style.display = mode==='test' ? '' : 'none';
+  refreshSpeedUI();   // [v2.5]
   go('quiz'); nextQ();
 }
 function nextQ(){
@@ -1163,7 +1234,7 @@ async function finishQuiz(quit){
       if(r.pass) confetti();
       const wrong = r.review.filter(x=>!x.ok).map(x=>x.word);
       modal(`<div style="font-size:60px">${r.pass?'🏆':'💪'}</div><h2>${r.score}점 ${r.pass?'통과!':'아쉬워요'}</h2>
-        ${r.pass?`<p>${ST.level>q.level?'<b>레벨 '+ST.level+'</b>과 새 그림판이 열렸어요!':'🎓 마지막 레벨까지 통과했어요!'}</p>`:`<p class="muted">${r.late?'시간이 초과됐어요. ':''}${ST.rules.passScore}점 넘으면 통과! ${r.retryHours}시간 뒤 다시 도전해요.</p>`}
+        ${r.pass?`<p>${r.next?'<b>'+esc(r.next)+'</b>과 새 그림판이 열렸어요!':'🎓 이 코스 마지막 레벨까지 통과했어요!'}</p>`:`<p class="muted">${r.late?'시간이 초과됐어요. ':''}${ST.rules.passScore}점 넘으면 통과! ${r.retryHours}시간 뒤 다시 도전해요.</p>`}
         ${wrong.length?`<p class="muted">틀린 단어: ${esc(wrong.join(', '))}</p>`:''}
         <button class="btn" onclick="closeModal()">확인</button>`);
     }catch(e){ toast(e.message); enterMain(); }
@@ -1195,7 +1266,7 @@ function showPieces(pieces){
 
 /* ---------- 레벨테스트 ---------- */
 function confirmTest(lv){
-  modal(`<div style="font-size:54px">📝</div><h2>레벨 ${lv} 테스트</h2><p>${ST.rules.testCount}문제 · 문제당 ${ST.rules.testSec}초<br><b>${ST.rules.passScore}점 이상</b>이면 통과 → 다음 레벨!</p><p class="muted">시작하면 중간에 그만둘 수 없어요. 떨어지면 ${ST.rules.retryHours}시간 뒤에 다시 볼 수 있어요.</p>
+  modal(`<div style="font-size:54px">📝</div><h2>${LV(lv)} 테스트</h2><p>${ST.rules.testCount}문제 · 문제당 ${ST.rules.testSec}초<br><b>${ST.rules.passScore}점 이상</b>이면 통과 → 다음 레벨!</p><p class="muted">시작하면 중간에 그만둘 수 없어요. 떨어지면 ${ST.rules.retryHours}시간 뒤에 다시 볼 수 있어요.</p>
   <div class="row"><button class="btn gray" onclick="closeModal()">나중에</button><button class="btn" onclick="closeModal();startTest(${lv})">시작!</button></div>`);
 }
 async function startTest(lv){
@@ -1212,7 +1283,7 @@ let WTAB = 0;   // 0 = 오답노트, 숫자 = 레벨
 function goWrongNote(){ WTAB = 0; showTab('tabWords'); }
 async function renderWords(){
   if(WTAB === null || WTAB === undefined) WTAB = ST.level;
-  const chips = ST.levels.filter(l=>l.open).map(l=>`<button class="${WTAB===l.lv?'on':''}" onclick="WTAB=${l.lv};renderWords()">레벨 ${l.lv}</button>`).join('');
+  const chips = myLevels(ST.levels).filter(l=>l.open).map(l=>`<button class="${WTAB===l.lv?'on':''}" onclick="WTAB=${l.lv};renderWords()">${LV(l.lv)}</button>`).join('');   // [v2.4]
   document.getElementById('wordChips').innerHTML = `<button class="${WTAB===0?'on':''}" onclick="WTAB=0;renderWords()">📒 오답노트</button>`+chips;
   const box = document.getElementById('wordList');
   box.innerHTML = '<p class="muted">불러오는 중...</p>';
@@ -1238,8 +1309,8 @@ function starWord(id, on){   // [v2.2] 누르는 즉시 바뀌고, 저장은 뒤
  *  🎁 보상
  * ============================================================= */
 async function renderBox(){
-  document.getElementById('boardList').innerHTML = ST.levels.filter(l=>l.open || l.board.opened.length).map(l=>
-    `<div class="card" onclick="openBoardModal(${l.lv})"><div class="top"><b>레벨 ${l.lv} · ${esc(l.name)}</b><span class="muted">조각 ${l.board.opened.length}/${l.board.pieces}</span></div><div style="margin-top:8px">${boardHTML(l.board)}</div></div>`).join('');
+  document.getElementById('boardList').innerHTML = ST.levels.filter(l=>(l.open && myLevels([l]).length) || l.board.opened.length).map(l=>
+    `<div class="card" onclick="openBoardModal(${l.lv})"><div class="top"><b>${LV(l.lv)} · ${esc(l.name)}</b><span class="muted">조각 ${l.board.opened.length}/${l.board.pieces}</span></div><div style="margin-top:8px">${boardHTML(l.board)}</div></div>`).join('');
   const box = document.getElementById('prizeList');
   box.innerHTML = '<p class="muted">불러오는 중...</p>';
   try{
@@ -1311,13 +1382,16 @@ let G = null;
 function startGame(){
   const words = todayWordObjs();
   if(words.length < GAME_MIN_WORDS){ toast('오늘 공부한 단어가 '+GAME_MIN_WORDS+'개 이상 있어야 해요'); return; }
+  const wrongIds = ST.todayWrong || [];   // [v2.5] 오늘 틀린 단어는 GAME_WRONG_WEIGHT배 자주
+  const pool = [].concat(...words.map(w=>Array(wrongIds.indexOf(w.id)>=0 ? GAME_WRONG_WEIGHT : 1).fill(w)));
   let q = [];
-  while(q.length < GAME_ROUND) q = q.concat(shuffle(words.slice()));
+  while(q.length < GAME_ROUND) q = q.concat(shuffle(pool.slice()));
   q = q.slice(0, GAME_ROUND);
-  G = {q, words, i:-1, lives:LIVES, score:0, combo:0, correct:0, fall:FALL_START_SEC, apple:null, busy:false, raf:0};
+  for(let k=1;k<q.length;k++) if(q[k].id===q[k-1].id){ const j = q.findIndex((x,m)=>m>k && x.id!==q[k].id && (!q[m-1] || q[m-1].id!==x.id)); if(j>0){ const t=q[k]; q[k]=q[j]; q[j]=t; } }
+  G = {q, words, miss:[], i:-1, lives:LIVES, score:0, combo:0, correct:0, fall:FALL_START_SEC, apple:null, busy:false, raf:0};
   document.getElementById('gMic').style.display = recogOK() ? '' : 'none';
   document.getElementById('gNote').textContent = recogOK() ? '' : '이 브라우저는 마이크 인식이 안 돼요. 버튼으로 해요.';
-  go('game'); gNext();
+  go('game'); refreshSpeedUI(); gNext();
 }
 function gHud(){
   document.getElementById('hudLife').textContent = '❤️'.repeat(Math.max(0,G.lives)) + '🤍'.repeat(LIVES-Math.max(0,G.lives));
@@ -1367,6 +1441,7 @@ function gGood(btn){
 function gMiss(msg){
   G.busy = true; lastAnswerAt = Date.now();
   G.lives--; G.combo = 0; G.fall = Math.min(FALL_START_SEC, G.fall + 0.6);
+  if(G.miss.indexOf(G.word.id) < 0) G.miss.push(G.word.id);   // [v2.5]
   const gm = document.getElementById('game'); gm.classList.add('shake'); setTimeout(()=>gm.classList.remove('shake'), 400);
   gFlash('💥 '+msg, '#ff5a5f'); say(G.word.en); gHud();
   setTimeout(gNext, 1300);
@@ -1387,8 +1462,10 @@ function quitGame(){
 }
 function gEnd(){
   const g = G; G = null; stopMic();
+  if(g.miss.length) api('gameResult', {miss: g.miss}, {quiet:true}).catch(()=>{});   // [v2.5] 게임에서 틀린 단어 ⭐
   enterMain(); showTab('tabGame');
   modal(`<div style="font-size:60px">${g.lives>0?'🏅':'🍎'}</div><h2>${g.lives>0?'잘했어요!':'아쉬워요!'}</h2><p>${g.correct}/${g.q.length} 정답 · ${g.score}점</p>
+    ${g.miss.length?`<p class="muted">틀린 단어 ⭐: ${esc(g.miss.map(id=>(WMAP[id]||{}).en).join(', '))}<br>다음 공부 때 먼저 나와요</p>`:''}
     <div class="row"><button class="btn gray" onclick="closeModal()">닫기</button><button class="btn" onclick="closeModal();startGame()">한 판 더</button></div>`);
 }
 
@@ -1468,7 +1545,7 @@ function renderDad(j){
   }
   // 사용자 목록
   document.getElementById('dadUsers').innerHTML = j.users.map(u=>
-    `<button class="${j.user && j.user.uid===u.uid?'on':''}" onclick="dadPick('${jsq(u.uid)}')"><span class="dot ${u.studying?'live':''}"></span>${esc(u.name)} · Lv${u.level}</button>`).join('');
+    `<button class="${j.user && j.user.uid===u.uid?'on':''}" onclick="dadPick('${jsq(u.uid)}')"><span class="dot ${u.studying?'live':''}"></span>${esc(u.name)} · ${esc(u.levelName||'Lv'+u.level)}</button>`).join('');
   document.getElementById('dadNoUser').textContent = j.users.length ? '' : '아직 등록한 사람이 없어요. 아래 앱 링크를 보내 주세요.';
   document.getElementById('dadUserBody').style.display = j.user ? '' : 'none';
   document.getElementById('adminToggle').textContent = ADMIN_PIN ? '🔧 이 폰 관리자 모드 끄기' : '🔧 이 폰에서 관리자 모드 켜기';
@@ -1476,17 +1553,19 @@ function renderDad(j){
   const u = j.user; DAD_UID = u.uid;
   document.getElementById('dadStatus').innerHTML =
     `<div style="font-size:18px;font-weight:700"><span class="dot ${u.studying?'live':''}"></span>${esc(u.name)} ${u.studying?'지금 공부 중! ('+u.sessionMin+'분째)':'지금은 쉬는 중'}</div>
-     <p class="muted">레벨 ${u.level} · 오늘 ${u.todayDone}/${u.goal}문제 · 오늘 ${u.todayMin}분 · 전체 ${u.totalMin}분 · 🔥 ${u.streak}일 ${u.diagDone?'':'· 진단 전'}</p>`;
+     <p class="muted">${esc(u.levelName||'레벨 '+u.level)} · 오늘 ${u.todayDone}/${u.goal}문제 · 오늘 ${u.todayMin}분 · 전체 ${u.totalMin}분 · 🔥 ${u.streak}일 ${u.diagDone?'':'· 진단 전'}</p>
+     <p class="muted" style="margin:6px 0 2px">공부 모드</p>
+     <div class="row" style="flex-wrap:wrap" id="dadModes">${Object.keys(j.modes||{}).map(m=>`<button class="btn small ${m===u.mode?'':'gray'}" style="flex:1 1 30%" onclick="dadCall('dadSetMode',{mode:'${m}'})">${esc(j.modes[m])}</button>`).join('')}</div>`;   // [v2.4]
   // 그림판 설정 (입력 중이면 새로고침으로 지우지 않기)
   const act = document.activeElement;
   if(!(act && act.closest && act.closest('#dadBoards'))){
-    document.getElementById('dadBoards').innerHTML = u.levels.map(l=>{
+    document.getElementById('dadBoards').innerHTML = myLevels(u.levels, u.courses).map(l=>{   // [v2.4] 지금 모드의 코스만
       const b = l.board, st = b.done ? (b.paidOut ? '✅ 완성·보상함 넣음' : '🧩 다 열림 · 상품 기다리는 중') : (l.open ? '진행 중' : '🔒 잠김');
-      return `<div class="lvrow"><div class="top"><b>레벨 ${l.lv} · ${esc(l.name)}</b><span class="muted">조각 ${b.opened.length}/${b.pieces}</span></div>
+      return `<div class="lvrow"><div class="top"><b>${LV(l.lv, u.levels)} · ${esc(l.name)}</b><span class="muted">조각 ${b.opened.length}/${b.pieces}</span></div>
         <div class="muted">${st} · 외움 ${l.learned}/${l.total}${l.passed?' · 🏆 테스트 통과':''}${l.waitMin?` · 테스트 ${fmtWait(l.waitMin)} 대기 <button class="chip" onclick="dadCall('dadClearCooldown',{level:${l.lv}})">지금 다시 보게</button>`:''}</div>
         <div class="row" style="margin-top:4px"><select id="bt_${l.lv}" style="flex:0 0 38%">${j.themes.map(t=>`<option value="${t}" ${t===b.theme?'selected':''}>${THEME_NAME[t]}</option>`).join('')}</select>
         <input id="bp_${l.lv}" maxlength="30" placeholder="상품 (예: 치킨 1개)" value="${esc(b.prize)}" ${b.paidOut?'disabled':''}></div>
-        ${b.paidOut?'':`<button class="btn small gray" onclick="dadSetBoard(${l.lv})">레벨 ${l.lv} 저장</button>`}</div>`;
+        ${b.paidOut?'':`<button class="btn small gray" onclick="dadSetBoard(${l.lv})">${LV(l.lv, u.levels)} 저장</button>`}</div>`;
     }).join('');
   }
   document.getElementById('dadReward').innerHTML = u.reward
@@ -1498,7 +1577,7 @@ function renderDad(j){
   document.getElementById('dadLog').textContent = u.log.join('\n') || '기록 없음';
 }
 function dadSetBoard(lv){
-  dadCall('dadSetBoard', {level:lv, theme:document.getElementById('bt_'+lv).value, prize:document.getElementById('bp_'+lv).value}).then(j=>{ if(j) toast('레벨 '+lv+' 그림판 저장'); });
+  dadCall('dadSetBoard', {level:lv, theme:document.getElementById('bt_'+lv).value, prize:document.getElementById('bp_'+lv).value}).then(j=>{ if(j) toast(LV(lv, j.user && j.user.levels)+' 그림판 저장'); });
 }
 function quickMin(m){ document.getElementById('rMin').value = m; }
 function dadSetReward(){
