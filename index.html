@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>영공도전_jw</title>
+<style>
+:root{--sky1:#7ec8ff;--sky2:#d9f1ff;--grass:#5cc96b;--ink:#1d2a3a;--card:#fff;--pri:#ff5a5f;--ok:#22b35e;--warn:#ff9f1a;--sub:#6b7a8c;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;color:var(--ink);background:#f2f6fb}
+button{font:inherit;border:0;cursor:pointer}
+.scr{display:none;min-height:100%;padding:16px 16px 40px}
+.scr.on{display:block}
+h1{font-size:22px;margin:4px 0 12px}
+h2{font-size:18px;margin:18px 0 8px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.chip{background:#fff;border-radius:20px;padding:6px 12px;font-size:14px;box-shadow:0 1px 4px #0001;white-space:nowrap}
+.card{background:var(--card);border-radius:16px;padding:14px;margin:10px 0;box-shadow:0 2px 8px #0000000f}
+.lvhead{display:flex;justify-content:space-between;align-items:center}
+.lvname{font-weight:700;font-size:17px}
+.lock{opacity:.45}
+.stages{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.stg{background:#eef4ff;border-radius:12px;padding:10px;text-align:left;font-size:14px}
+.stg b{display:block;font-size:13px;color:var(--sub);font-weight:500}
+.stg.done{background:#e3f8ea}
+.btn{display:block;width:100%;padding:14px;border-radius:14px;background:var(--pri);color:#fff;font-size:17px;font-weight:700;margin-top:10px}
+.btn.gray{background:#dfe6ee;color:var(--ink)}
+.btn.green{background:var(--ok)}
+.btn.small{padding:9px;font-size:14px;margin-top:6px}
+.btn:disabled{opacity:.45}
+.muted{color:var(--sub);font-size:13px}
+.row{display:flex;gap:8px}
+.row>*{flex:1}
+input{font:inherit;width:100%;padding:12px;border:1px solid #cfd8e3;border-radius:12px;margin-top:6px}
+/* 단어장 */
+.word{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid #eef1f5}
+.word .e{font-size:26px;width:36px;text-align:center}
+.word .en{font-weight:700;font-size:18px}
+.word .ko{color:var(--sub);font-size:14px}
+.word button{margin-left:auto;background:#eef4ff;border-radius:10px;padding:8px 10px}
+/* 게임 */
+#game{padding:0;background:linear-gradient(var(--sky1),var(--sky2));height:100%;overflow:hidden;position:relative}
+#hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:12px 14px;font-weight:700;z-index:3}
+#hud span{background:#ffffffcc;border-radius:14px;padding:5px 10px;font-size:14px}
+#field{position:absolute;top:0;left:0;right:0;bottom:200px}
+#ground{position:absolute;left:0;right:0;bottom:200px;height:14px;background:var(--grass);border-top:3px solid #3fa94f}
+.apple{position:absolute;top:0;width:120px;margin-left:-60px;text-align:center;will-change:transform}
+.apple .fruit{font-size:58px;line-height:1;filter:drop-shadow(0 4px 3px #0002)}
+.apple .tag{display:inline-block;background:#fff;border-radius:10px;padding:3px 8px;font-size:15px;font-weight:700;margin-top:2px;box-shadow:0 1px 4px #0002}
+.apple.pop{transition:transform .25s, opacity .25s;opacity:0}
+#pad{position:absolute;left:0;right:0;bottom:0;height:200px;background:#fffffff2;padding:12px;z-index:3}
+#choices{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+#choices button{background:#fff3e6;border:2px solid #ffd2a6;border-radius:14px;padding:16px 4px;font-size:18px;font-weight:700}
+#padRow{display:flex;gap:8px;margin-top:10px}
+#micBtn{flex:3;background:var(--pri);color:#fff;border-radius:16px;padding:16px;font-size:18px;font-weight:700}
+#micBtn.listen{background:#ff9f1a;animation:pulse 1s infinite}
+#hintBtn,#quitBtn{flex:1;background:#eef4ff;border-radius:16px;font-size:20px}
+@keyframes pulse{50%{transform:scale(1.04)}}
+.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+#flash{position:absolute;top:40%;left:0;right:0;text-align:center;font-size:30px;font-weight:800;z-index:4;pointer-events:none;text-shadow:0 2px 0 #fff}
+/* 테스트 */
+.qbox{text-align:center;padding:26px 10px}
+.qbig{font-size:34px;font-weight:800}
+.qemo{font-size:70px}
+.tbar{height:10px;background:#e3e9f0;border-radius:6px;overflow:hidden;margin:10px 0}
+.tbar i{display:block;height:100%;background:var(--warn);width:100%}
+.opts button{display:block;width:100%;text-align:left;background:#fff;border:2px solid #e1e8f0;border-radius:14px;padding:15px;font-size:18px;margin:8px 0}
+/* 팝업 */
+#toast{position:fixed;left:50%;top:14px;transform:translate(-50%,-120px);background:#1d2a3a;color:#fff;padding:12px 18px;border-radius:16px;font-size:15px;z-index:20;transition:transform .35s;max-width:90%;text-align:center}
+#toast.on{transform:translate(-50%,0)}
+.modal{position:fixed;inset:0;background:#0008;display:none;align-items:center;justify-content:center;z-index:30;padding:20px}
+.modal.on{display:flex}
+.mbox{background:#fff;border-radius:22px;padding:24px;text-align:center;width:100%;max-width:360px}
+.gift{font-size:96px;animation:wob 1.2s infinite}
+@keyframes wob{25%{transform:rotate(-8deg)}75%{transform:rotate(8deg)}}
+.coupon{border:2px dashed var(--pri);border-radius:14px;padding:14px;margin:8px 0;background:#fff7f7}
+.coupon.used{border-color:#c8d1db;background:#f4f6f8;opacity:.7}
+.coupon .amt{font-size:22px;font-weight:800;color:var(--pri)}
+.coupon.used .amt{color:var(--sub)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#c8d1db;margin-right:6px}
+.dot.live{background:var(--ok);box-shadow:0 0 0 4px #22b35e33}
+.log{font-size:12px;color:var(--sub);white-space:pre-wrap;line-height:1.6}
+.confetti{position:fixed;top:-20px;font-size:22px;z-index:40;pointer-events:none;animation:fall 2.2s linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(540deg)}}
+</style>
+</head>
+<body>
+
+<!-- 처음 연결 -->
+<div class="scr" id="setup">
+  <h1>🍎 영공도전_jw</h1>
+  <div class="card">
+    <b>서버 주소 넣기 (처음 한 번만)</b>
+    <p class="muted">아빠 화면의 "지우 폰 연결 링크"를 열면 자동으로 넣어져요. 직접 넣으려면 앱스 스크립트 웹앱 주소(…/exec)를 붙여 넣으세요.</p>
+    <input id="serverIn" placeholder="https://script.google.com/macros/s/…/exec">
+    <button class="btn" onclick="saveServer()">연결하기</button>
+    <p class="muted" id="setupMsg"></p>
+  </div>
+</div>
+
+<!-- 홈 -->
+<div class="scr" id="home">
+  <div class="top">
+    <h1>🍎 영공도전</h1>
+    <div class="row" style="flex:0 0 auto">
+      <span class="chip" id="todayChip">오늘 0분</span>
+      <button class="chip" onclick="showCoupons()">🎟 교환권</button>
+    </div>
+  </div>
+  <button class="btn green" id="giftHomeBtn" style="display:none" onclick="openGift()">🎁 이벤트 상자가 도착했어요!</button>
+  <div id="levels"></div>
+  <p class="muted" style="text-align:center" id="verLine"></p>
+</div>
+
+<!-- 단어장 -->
+<div class="scr" id="stage">
+  <div class="top"><h1 id="stageTitle"></h1><button class="chip" onclick="go('home')">← 홈</button></div>
+  <div class="card" id="stageInfo"></div>
+  <button class="btn" onclick="startGame()">🍎 사과 게임 시작</button>
+  <div class="card" id="wordList"></div>
+</div>
+
+<!-- 게임 -->
+<div class="scr" id="game">
+  <div id="hud"><span id="hudLife">❤️❤️❤️</span><span id="hudProg">1/15</span><span id="hudScore">0점</span></div>
+  <div id="field"></div>
+  <div id="flash"></div>
+  <div id="ground"></div>
+  <div id="pad">
+    <div id="choices"></div>
+    <div id="padRow">
+      <button id="hintBtn" onclick="hint()">🔊</button>
+      <button id="micBtn" onclick="mic()">🎤 말하기</button>
+      <button id="quitBtn" onclick="quitGame()">✕</button>
+    </div>
+    <p class="muted" id="micNote" style="margin:6px 0 0;text-align:center"></p>
+  </div>
+</div>
+
+<!-- 레벨테스트 -->
+<div class="scr" id="test">
+  <div class="top"><h1 id="testTitle">레벨테스트</h1><span class="chip" id="testProg"></span></div>
+  <div class="tbar"><i id="tbar"></i></div>
+  <div class="card qbox" id="qbox"></div>
+  <div class="opts" id="opts"></div>
+</div>
+
+<!-- 교환권 -->
+<div class="scr" id="coupons">
+  <div class="top"><h1>🎟 내 교환권</h1><button class="chip" onclick="go('home')">← 홈</button></div>
+  <p class="muted">아빠에게 보여주면 용돈으로 바꿔 줘요.</p>
+  <div id="couponList"></div>
+</div>
+
+<!-- 아빠 화면 -->
+<div class="scr" id="dad">
+  <div class="top"><h1>👨 아빠 화면</h1><span class="chip" id="dadVer"></span></div>
+  <div id="dadLogin" class="card">
+    <b>비밀번호</b>
+    <input id="pinIn" type="password" inputmode="numeric" placeholder="DAD_PIN">
+    <button class="btn" onclick="dadLogin()">들어가기</button>
+    <p class="muted" id="dadMsg"></p>
+  </div>
+  <div id="dadBody" style="display:none">
+    <div class="card" id="dadStatus"></div>
+    <div class="card">
+      <b>🎁 실시간 보상 예약</b>
+      <p class="muted">지우가 <b>실제로 문제를 푼 시간</b>으로 세요. 시간이 되면 지우 화면에 이벤트 상자가 나타나요.</p>
+      <div id="dadReward"></div>
+      <div class="row">
+        <div><span class="muted">공부 시간(분)</span><input id="rMin" type="number" value="30"></div>
+        <div><span class="muted">금액(원)</span><input id="rAmt" type="number" value="5000"></div>
+      </div>
+      <input id="rMemo" placeholder="한마디 (예: 치킨 쏜다!)">
+      <div class="row">
+        <button class="btn small gray" onclick="quickMin(10)">10분</button>
+        <button class="btn small gray" onclick="quickMin(20)">20분</button>
+        <button class="btn small gray" onclick="quickMin(30)">30분</button>
+        <button class="btn small gray" onclick="quickMin(60)">60분</button>
+      </div>
+      <button class="btn" onclick="dadSet()">보상 예약하기</button>
+    </div>
+    <div class="card"><b>📈 진도</b><div id="dadProg"></div></div>
+    <div class="card"><b>🎟 교환권</b><div id="dadCoupons"></div></div>
+    <div class="card">
+      <b>📱 지우 폰 연결 링크</b>
+      <p class="muted">지우 폰에서 이 링크를 한 번 열면 서버가 자동으로 연결돼요. (사파리에서 열기)</p>
+      <input id="kidLink" readonly onclick="this.select()">
+      <button class="btn small gray" onclick="copyLink()">링크 복사</button>
+    </div>
+    <div class="card"><b>📝 최근 기록</b><div class="log" id="dadLog"></div></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div class="modal" id="modal"><div class="mbox" id="mbox"></div></div>
+
+<script>
+/***************************************************************
+ * 영공도전_jw 앱 화면
+ * VERSION 1.0   (고친 곳은 [v버전] 표시로 Ctrl+F 찾기)
+ ***************************************************************/
+
+// ===================== 조절할 값 =====================
+const VERSION = '1.0';            // 앱 화면 버전
+const BEAT_SEC = 30;              // 서버에 "공부 중" 신호 보내는 간격(초)
+const ACTIVE_WINDOW_SEC = 45;     // 마지막으로 문제 푼 뒤 이 시간(초) 안이어야 공부 시간으로 인정
+const LIVES = 3;                  // 사과 게임 목숨 수
+const FALL_START_SEC = 8;         // 사과가 땅까지 떨어지는 시간(초) — 처음
+const FALL_MIN_SEC = 4;           // 가장 빠를 때 떨어지는 시간(초)
+const FALL_STEP_SEC = 0.3;        // 연속으로 맞힐 때마다 빨라지는 정도(초)
+const AUTO_SAY_MAX_LEVEL = 2;     // 이 레벨까지는 사과가 나올 때 영어 소리를 자동으로 들려줌
+const HINT_PENALTY = 0.5;         // 🔊 힌트를 쓰면 그 사과 점수에 곱하는 값 (0.5 = 반만)
+const POINT = 10;                 // 사과 하나 기본 점수
+const TEASER_MIN_SEC = 90;        // 보상 예약 중일 때 티저 문구가 뜨는 간격 — 최소(초)
+const TEASER_MAX_SEC = 220;       // 티저 문구 간격 — 최대(초)
+const DAD_REFRESH_SEC = 15;       // 아빠 화면 자동 새로고침 간격(초)
+const SPEECH_RATE = 0.85;         // 영어 읽어주는 속도 (1이 보통)
+const TEASERS = [                 // 보상 예약 중에 랜덤으로 뜨는 문구
+  '🎁 어? 곧 보상이 열리겠는데요?', '👀 뭔가 다가오고 있어요...', '🔥 이 기세면 상자가 열려요!',
+  '✨ 아빠가 뭔가 준비한 것 같아요', '🍎 조금만 더! 뭔가 느낌이 와요', '📦 상자 흔들리는 소리가 들려요...'
+];
+// =====================================================
+
+let SERVER = '';
+let ST = null;          // 서버에서 받은 내 상태
+let BANK = [];          // 단어 은행
+let COUPONS = [];
+let lastAnswerAt = 0;   // 마지막으로 문제 푼 시각
+let curStage = null;    // 지금 소단계 {lv, stage}
+let teaserTimer = null, giftShown = false;
+
+/* ---------- 저장소 (사파리에서 막혀도 안 멈추게) ---------- */
+function sget(k){ try{ return localStorage.getItem(k) || ''; }catch(e){ return ''; } }
+function sset(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+
+/* ---------- 서버 요청 ---------- */
+async function api(action, data){
+  const body = JSON.stringify(Object.assign({action}, data||{}));
+  const r = await fetch(SERVER, {method:'POST', body});   // text/plain 으로 가서 추가 확인 요청 없이 바로 가요
+  const j = await r.json();
+  if(!j.ok) throw Object.assign(new Error(j.msg||'오류'), {res:j});
+  return j;
+}
+
+/* ---------- 화면 전환 ---------- */
+function go(id){
+  document.querySelectorAll('.scr').forEach(s=>s.classList.toggle('on', s.id===id));
+  window.scrollTo(0,0);
+}
+function toast(msg, ms){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('on');
+  clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('on'), ms||2600);
+}
+function modal(html){ document.getElementById('mbox').innerHTML = html; document.getElementById('modal').classList.add('on'); }
+function closeModal(){ document.getElementById('modal').classList.remove('on'); }
+function esc(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function won(n){ return Number(n||0).toLocaleString('ko-KR') + '원'; }
+function confetti(){
+  const set = ['🎉','✨','🍎','💰','⭐'];
+  for(let i=0;i<24;i++){
+    const d = document.createElement('div'); d.className='confetti';
+    d.textContent = set[i%set.length]; d.style.left = Math.random()*100+'vw';
+    d.style.animationDelay = (Math.random()*0.8)+'s';
+    document.body.appendChild(d); setTimeout(()=>d.remove(), 3200);
+  }
+}
+
+/* ---------- 영어 읽어주기 ---------- */
+let enVoice = null;
+function pickVoice(){
+  try{
+    const vs = speechSynthesis.getVoices();
+    enVoice = vs.find(v=>v.lang==='en-US' && /Samantha|Google US/i.test(v.name)) || vs.find(v=>v.lang==='en-US') || vs.find(v=>/^en/.test(v.lang)) || null;
+  }catch(e){}
+}
+try{ speechSynthesis.onvoiceschanged = pickVoice; pickVoice(); }catch(e){}
+function say(text){
+  try{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US'; u.rate = SPEECH_RATE; if(enVoice) u.voice = enVoice;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+
+/* ---------- 시작 ---------- */
+function readHash(){
+  // #dad , #dad&s=서버주소 , #s=서버주소
+  const h = decodeURIComponent(location.hash.slice(1));
+  const parts = h.split('&'); let isDad = false;
+  parts.forEach(p=>{
+    if(p==='dad') isDad = true;
+    if(p.indexOf('s=')===0){ const u = p.slice(2); if(/^https:\/\/script\.google\.com\//.test(u)){ sset('yg_server', u); } }
+  });
+  if(h.indexOf('s=')>=0) history.replaceState(null,'', location.pathname + location.search + (isDad?'#dad':''));
+  return isDad;
+}
+async function boot(){
+  const isDad = readHash();
+  SERVER = sget('yg_server');
+  if(!SERVER){ go('setup'); return; }
+  if(isDad){ go('dad'); document.getElementById('dadVer').textContent='v'+VERSION; const p=sget('yg_pin'); if(p){ document.getElementById('pinIn').value=p; dadLogin(); } return; }
+  try{
+    const j = await api('init');
+    ST = j; BANK = j.bank; COUPONS = j.coupons || [];
+    document.getElementById('verLine').textContent = '앱 v'+VERSION+' · 서버 v'+j.version;
+    renderHome(); go('home');
+    setInterval(beat, BEAT_SEC*1000);
+    document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) beat(); });
+    afterReward(j.reward);
+  }catch(e){
+    go('setup'); document.getElementById('setupMsg').textContent = '서버 연결 실패: '+e.message+' — 주소를 확인하세요.';
+  }
+}
+function saveServer(){
+  const v = document.getElementById('serverIn').value.trim();
+  if(!/^https:\/\/script\.google\.com\/.+\/exec/.test(v)){ document.getElementById('setupMsg').textContent='…/exec 로 끝나는 웹앱 주소를 넣어 주세요.'; return; }
+  sset('yg_server', v); location.reload();
+}
+
+/* ---------- 홈 ---------- */
+function renderHome(){
+  document.getElementById('todayChip').textContent = '오늘 '+Math.round((ST.todaySec||0)/60)+'분';
+  let html = '';
+  BANK.forEach(L=>{
+    const t = ST.tests[L.lv]; const open = t.open;
+    const done = L.stages.filter(s=>ST.cleared[s.id]).length;
+    html += `<div class="card ${open?'':'lock'}"><div class="lvhead"><span class="lvname">${t.passed?'🏆':open?'🔓':'🔒'} 레벨 ${L.lv} · ${esc(L.name)}</span><span class="muted">${done}/${L.stages.length}</span></div>`;
+    if(open){
+      html += '<div class="stages">';
+      L.stages.forEach(s=>{
+        const c = ST.cleared[s.id];
+        html += `<button class="stg ${c?'done':''}" onclick="openStage(${L.lv},'${s.id}')">${c?'✅':'🍎'} ${s.id}<b>${esc(s.name)}${ST.best[s.id]?' · 최고 '+ST.best[s.id]:''}</b></button>`;
+      });
+      html += '</div>';
+      if(t.passed) html += `<p class="muted">테스트 통과 완료!</p>`;
+      else if(!t.allClear) html += `<button class="btn gray small" disabled>📝 레벨테스트 (사과 게임 모두 통과하면 열려요)</button>`;
+      else if(t.waitMin) html += `<button class="btn gray small" disabled>📝 레벨테스트 · ${fmtWait(t.waitMin)} 뒤 다시 도전</button>`;
+      else html += `<button class="btn small" onclick="confirmTest(${L.lv})">📝 레벨 ${L.lv} 테스트 도전! (교환권)</button>`;
+    } else html += `<p class="muted">앞 레벨 테스트를 통과하면 열려요</p>`;
+    html += '</div>';
+  });
+  document.getElementById('levels').innerHTML = html;
+}
+function fmtWait(m){ return m>=60 ? Math.ceil(m/60)+'시간' : m+'분'; }
+
+/* ---------- 단어장 ---------- */
+function stageOf(id){ for(const L of BANK) for(const s of L.stages) if(s.id===id) return {L, s}; return null; }
+function openStage(lv, id){
+  const o = stageOf(id); curStage = o;
+  document.getElementById('stageTitle').textContent = '🍎 '+id+' '+o.s.name;
+  document.getElementById('stageInfo').innerHTML = `사과 ${ST.rules.stageRound}개 중 <b>${ST.rules.stageClear}개 이상</b> 맞히면 통과! 목숨은 ${LIVES}개예요.<br><span class="muted">버튼을 누르거나 🎤 를 누르고 영어로 말해도 돼요.</span>`;
+  document.getElementById('wordList').innerHTML = o.s.words.map((w,i)=>
+    `<div class="word"><span class="e">${w.emo||'🍎'}</span><div><div class="en">${esc(w.en)}</div><div class="ko">${esc(w.ko)}</div></div><button onclick="say('${w.en.replace(/'/g,"\\'")}')">🔊</button></div>`).join('');
+  go('stage');
+}
+
+/* ---------- 사과 게임 ---------- */
+let G = null;
+function startGame(){
+  const words = curStage.s.words;
+  let q = [];
+  while(q.length < ST.rules.stageRound) q = q.concat(shuffle(words.slice()));
+  q = q.slice(0, ST.rules.stageRound);
+  G = {q, i:-1, lives:LIVES, score:0, combo:0, correct:0, fall:FALL_START_SEC, apple:null, busy:false, raf:0, hinted:false};
+  document.getElementById('hintBtn').style.visibility = curStage.L.lv > AUTO_SAY_MAX_LEVEL ? 'visible' : 'hidden';
+  document.getElementById('micNote').textContent = recogOK() ? '' : '이 브라우저는 마이크 인식을 지원하지 않아요. 버튼으로 해요.';
+  document.getElementById('micBtn').style.display = recogOK() ? '' : 'none';
+  go('game');
+  nextApple();
+}
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function hud(){
+  document.getElementById('hudLife').textContent = '❤️'.repeat(G.lives) + '🤍'.repeat(LIVES-G.lives);
+  document.getElementById('hudProg').textContent = Math.min(G.i+1, G.q.length)+'/'+G.q.length + (G.combo>1?' 🔥'+G.combo:'');
+  document.getElementById('hudScore').textContent = G.score+'점';
+}
+function nextApple(){
+  stopMic();
+  G.i++; G.busy=false; G.hinted=false;
+  if(G.i >= G.q.length || G.lives<=0){ endGame(); return; }
+  const w = G.q[G.i]; G.word = w;
+  const field = document.getElementById('field');
+  field.innerHTML = '';
+  const a = document.createElement('div'); a.className='apple';
+  const lv = curStage.L.lv;
+  const label = lv===1 ? '' : w.ko;   // 파닉스는 그림+소리만, 나머지는 뜻을 보여줌
+  a.innerHTML = `<div class="fruit">${w.emo||'🍎'}</div>${label?`<div class="tag">${esc(label)}</div>`:''}`;
+  a.style.left = (20 + Math.random()*60)+'%';
+  field.appendChild(a); G.apple = a;
+  // 보기 3개
+  let wrong;
+  if(lv===1 && w.alt.length>=2) wrong = shuffle(w.alt.slice()).slice(0,2);
+  else wrong = shuffle(curStage.s.words.filter(x=>x.en!==w.en).map(x=>x.en)).slice(0,2);
+  const ch = shuffle([w.en].concat(wrong));
+  document.getElementById('choices').innerHTML = ch.map(c=>`<button onclick="pick(this,'${c.replace(/'/g,"\\'")}')">${esc(c)}</button>`).join('');
+  hud();
+  if(lv <= AUTO_SAY_MAX_LEVEL) setTimeout(()=>say(w.en), 250);
+  G.t0 = performance.now(); G.dur = G.fall*1000;
+  cancelAnimationFrame(G.raf);
+  const loop = (t)=>{
+    if(!G || G.busy) return;
+    const p = Math.min(1, (t - G.t0)/G.dur);
+    const h = field.clientHeight - 90;
+    a.style.transform = `translateY(${p*h}px)`;
+    if(p>=1){ miss('땅에 떨어졌어요'); return; }
+    G.raf = requestAnimationFrame(loop);
+  };
+  G.raf = requestAnimationFrame(loop);
+}
+function flash(txt, color){
+  const f = document.getElementById('flash'); f.textContent = txt; f.style.color = color;
+  clearTimeout(f._h); f._h = setTimeout(()=>f.textContent='', 900);
+}
+function pick(btn, word){
+  if(!G || G.busy) return;
+  if(word === G.word.en) good(btn);
+  else { btn.classList.add('shake'); miss('정답: '+G.word.en); }
+}
+function good(btn){
+  G.busy = true; lastAnswerAt = Date.now();
+  G.correct++; G.combo++;
+  let pts = Math.round(POINT*(1+Math.min(G.combo,10)*0.1)*(G.hinted?HINT_PENALTY:1));
+  G.score += pts;
+  G.fall = Math.max(FALL_MIN_SEC, G.fall - FALL_STEP_SEC);
+  if(btn) btn.style.background = '#c9f2d6';
+  G.apple.classList.add('pop'); G.apple.style.transform += ' scale(1.6)';
+  flash('+'+pts+(G.combo>2?' 🔥'+G.combo:''), '#22b35e');
+  say(G.word.en);
+  hud();
+  setTimeout(nextApple, 700);
+}
+function miss(msg){
+  G.busy = true; lastAnswerAt = Date.now();
+  G.lives--; G.combo = 0; G.fall = Math.min(FALL_START_SEC, G.fall + 0.6);
+  document.getElementById('game').classList.add('shake');
+  setTimeout(()=>document.getElementById('game').classList.remove('shake'), 400);
+  flash('💥 '+msg, '#ff5a5f');
+  say(G.word.en);
+  hud();
+  setTimeout(nextApple, 1300);
+}
+function hint(){ if(!G || G.busy) return; G.hinted = true; say(G.word.en); }
+function quitGame(){
+  modal(`<h2>그만할까요?</h2><p class="muted">지금까지 한 건 저장되지 않아요.</p><div class="row"><button class="btn gray" onclick="closeModal()">계속하기</button><button class="btn" onclick="closeModal();G.busy=true;stopMic();G=null;go('stage')">그만하기</button></div>`);
+}
+async function endGame(){
+  const g = G; G = null; stopMic();
+  const alive = g.lives > 0;
+  const clear = alive && g.correct >= ST.rules.stageClear;
+  modal(`<div style="font-size:60px">${clear?'🏅':'🍎'}</div><h2>${clear?'통과!':'아쉬워요!'}</h2><p>${g.correct}/${g.q.length} 정답 · ${g.score}점</p><p class="muted">저장하는 중...</p>`);
+  try{
+    const j = await api('stageResult', {stage: curStage.s.id, correct: g.correct, score: g.score, alive});
+    Object.assign(ST, j);
+    renderHome();
+    let extra = '';
+    if(j.newlyCleared){
+      confetti();
+      if(ST.tests[curStage.L.lv].allClear && !ST.tests[curStage.L.lv].passed) extra = '<p><b>🎉 레벨 '+curStage.L.lv+' 사과 게임 모두 통과! 이제 레벨테스트가 열렸어요.</b></p>';
+    }
+    modal(`<div style="font-size:60px">${clear?'🏅':'🍎'}</div><h2>${clear?'통과!':'아쉬워요!'}</h2><p>${g.correct}/${g.q.length} 정답 · ${g.score}점</p>${clear?'':`<p class="muted">${ST.rules.stageClear}개 이상 맞히면 통과예요</p>`}${extra}
+      <div class="row"><button class="btn gray" onclick="closeModal();go('home')">홈</button><button class="btn" onclick="closeModal();startGame()">다시 하기</button></div>`);
+  }catch(e){
+    modal(`<h2>저장 실패</h2><p class="muted">${esc(e.message)}</p><button class="btn" onclick="closeModal();go('stage')">확인</button>`);
+  }
+}
+
+/* ---------- 마이크 ---------- */
+const NUM = {'3':'three','5':'five','6':'six','10':'ten'};
+let REC = null, recOn = false;
+function recogOK(){ return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }
+function norm(s){ return String(s).toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(Boolean).map(x=>NUM[x]||x); }
+function mic(){
+  if(!G || G.busy) return;
+  if(recOn){ stopMic(); return; }
+  const R = window.SpeechRecognition || window.webkitSpeechRecognition;
+  try{
+    REC = new R(); REC.lang = 'en-US'; REC.interimResults = false; REC.maxAlternatives = 5; REC.continuous = false;
+    const target = G.word.en.toLowerCase(); const idx = G.i;
+    REC.onresult = (ev)=>{
+      if(!G || G.i!==idx || G.busy) return;
+      const heard = [];
+      for(const alt of ev.results[0]) heard.push(alt.transcript);
+      const hit = heard.some(t=>{ const ws = norm(t); return ws.includes(target) || ws.join('')===target.replace(/\s/g,''); });
+      if(hit) good(null);
+      else toast('🎤 다시 말해봐요 (들린 말: '+(heard[0]||'?')+')');   // 마이크는 틀려도 목숨 안 깎아요
+    };
+    REC.onerror = (ev)=>{ if(ev.error==='not-allowed') toast('🎤 마이크 허용이 필요해요 (설정 → Safari → 마이크)'); else if(ev.error!=='aborted' && ev.error!=='no-speech') toast('🎤 인식 오류: '+ev.error); };
+    REC.onend = ()=>{ recOn=false; document.getElementById('micBtn').classList.remove('listen'); document.getElementById('micBtn').textContent='🎤 말하기'; };
+    REC.start(); recOn = true;
+    document.getElementById('micBtn').classList.add('listen'); document.getElementById('micBtn').textContent='🎙 듣는 중...';
+  }catch(e){ toast('🎤 마이크를 켤 수 없어요'); }
+}
+function stopMic(){ try{ if(REC && recOn) REC.abort(); }catch(e){} recOn=false; const b=document.getElementById('micBtn'); if(b){ b.classList.remove('listen'); b.textContent='🎤 말하기'; } }
+
+/* ---------- 레벨테스트 ---------- */
+let T = null;
+function confirmTest(lv){
+  modal(`<div style="font-size:54px">📝</div><h2>레벨 ${lv} 테스트</h2><p>${ST.rules.testCount}문제 · 문제당 ${ST.rules.testSec}초<br><b>${ST.rules.passScore}점 이상</b>이면 통과 → 교환권!</p><p class="muted">시작하면 중간에 그만둘 수 없어요. 떨어지면 하루 뒤에 다시 볼 수 있어요.</p>
+  <div class="row"><button class="btn gray" onclick="closeModal()">나중에</button><button class="btn" onclick="closeModal();startTest(${lv})">시작!</button></div>`);
+}
+async function startTest(lv){
+  try{
+    const j = await api('testStart', {level: lv});
+    T = {lv, qs:j.questions, sec:j.secPerQ, i:-1, ans:[], timer:0};
+    document.getElementById('testTitle').textContent = '레벨 '+lv+' 테스트';
+    go('test'); nextQ();
+  }catch(e){ toast(e.message); }
+}
+function nextQ(){
+  clearInterval(T.timer);
+  T.i++;
+  if(T.i >= T.qs.length){ submitTest(); return; }
+  const q = T.qs[T.i];
+  document.getElementById('testProg').textContent = (T.i+1)+' / '+T.qs.length;
+  let box = '';
+  if(q.type==='listen'){ box = `<div class="muted">듣고 고르세요</div><button class="btn gray" style="width:auto;display:inline-block;padding:14px 26px;font-size:28px" onclick="say('${q.say.replace(/'/g,"\\'")}')">🔊</button>`; setTimeout(()=>say(q.say),200); }
+  else if(q.type==='pic'){ box = `<div class="qemo">${q.emo}</div><div class="muted">${esc(q.ko)}</div><button class="btn gray" style="width:auto;display:inline-block;padding:10px 22px" onclick="say('${q.say.replace(/'/g,"\\'")}')">🔊 다시 듣기</button>`; setTimeout(()=>say(q.say),200); }
+  else if(q.type==='ko2en'){ box = `${q.emo?`<div class="qemo">${q.emo}</div>`:''}<div class="qbig">${esc(q.show)}</div><div class="muted">영어로 뭘까요?</div>`; }
+  else { box = `<div class="qbig">${esc(q.show)}</div><div class="muted">뜻이 뭘까요?</div>`; }
+  document.getElementById('qbox').innerHTML = box;
+  document.getElementById('opts').innerHTML = q.choices.map((c,k)=>`<button onclick="answer(${k})">${esc(c)}</button>`).join('');
+  const t0 = Date.now(); const bar = document.getElementById('tbar');
+  T.timer = setInterval(()=>{
+    const left = 1 - (Date.now()-t0)/(T.sec*1000);
+    bar.style.width = Math.max(0,left*100)+'%';
+    if(left<=0){ T.ans.push(-1); nextQ(); }
+  }, 100);
+}
+function answer(k){ if(!T) return; lastAnswerAt = Date.now(); T.ans.push(k); nextQ(); }
+async function submitTest(){
+  clearInterval(T.timer);
+  document.getElementById('qbox').innerHTML = '<div class="qbig">채점 중...</div>';
+  document.getElementById('opts').innerHTML = '';
+  try{
+    const j = await api('testSubmit', {answers: T.ans});
+    Object.assign(ST, j); COUPONS = j.coupons || COUPONS;
+    const r = j.result; T = null;
+    renderHome();
+    const wrong = r.review.filter(x=>!x.ok).map(x=>x.word);
+    if(r.pass) confetti();
+    modal(`<div style="font-size:64px">${r.pass?'🏆':'💪'}</div><h2>${r.score}점 ${r.pass?'통과!':'아쉬워요'}</h2>
+      ${r.pass?`<div class="coupon"><div class="amt">${won(r.coupon.amount)}</div>용돈교환권 · ${esc(r.coupon.memo)}</div>`:`<p class="muted">${r.late?'시간이 초과됐어요. ':''}${ST.rules.passScore}점 넘으면 통과! ${r.retryHours}시간 뒤 다시 도전해요.</p>`}
+      ${wrong.length?`<p class="muted">틀린 단어: ${esc(wrong.join(', '))}</p>`:''}
+      <button class="btn" onclick="closeModal();go('home')">홈으로</button>`);
+  }catch(e){ modal(`<h2>제출 실패</h2><p class="muted">${esc(e.message)}</p><button class="btn" onclick="closeModal();go('home')">확인</button>`); }
+}
+
+/* ---------- 공부 신호 · 보상 ---------- */
+async function beat(){
+  if(document.hidden || !ST) return;
+  const active = Date.now() - lastAnswerAt < ACTIVE_WINDOW_SEC*1000;
+  try{
+    const j = await api('beat', {active});
+    ST.todaySec = j.todaySec; ST.reward = j.reward;
+    document.getElementById('todayChip').textContent = '오늘 '+Math.round(j.todaySec/60)+'분';
+    afterReward(j.reward);
+  }catch(e){}
+}
+function afterReward(r){
+  document.getElementById('giftHomeBtn').style.display = r && r.ready ? '' : 'none';
+  if(r && r.ready){
+    clearTimeout(teaserTimer); teaserTimer = null;
+    const modalOpen = document.getElementById('modal').classList.contains('on');
+    if(!giftShown && !G && !T && !modalOpen){ giftShown = true; showGiftModal(); }   // 게임·테스트 중에는 끝난 뒤에 홈 버튼으로
+    return;
+  }
+  giftShown = false;
+  if(r && r.pending){ if(!teaserTimer) scheduleTeaser(); }
+  else { clearTimeout(teaserTimer); teaserTimer = null; }
+}
+function scheduleTeaser(){
+  const wait = (TEASER_MIN_SEC + Math.random()*(TEASER_MAX_SEC-TEASER_MIN_SEC))*1000;
+  teaserTimer = setTimeout(()=>{
+    teaserTimer = null;
+    if(ST.reward && ST.reward.pending && !ST.reward.ready){
+      if(Date.now()-lastAnswerAt < ACTIVE_WINDOW_SEC*1000) toast(TEASERS[Math.floor(Math.random()*TEASERS.length)], 3200);
+      scheduleTeaser();
+    }
+  }, wait);
+}
+function showGiftModal(){
+  modal(`<div class="gift">🎁</div><h2>이벤트 상자 도착!</h2><p class="muted">열심히 공부한 지우에게 아빠가 보낸 상자예요</p><button class="btn" onclick="openGift()">상자 열기</button>`);
+}
+async function openGift(){
+  modal(`<div class="gift">🎁</div><h2>여는 중...</h2>`);
+  try{
+    const j = await api('claimReward');
+    ST.reward = j.reward; afterReward(j.reward);
+    COUPONS.unshift(j.coupon);
+    confetti();
+    modal(`<div style="font-size:64px">🎉</div><h2>축하해요!</h2><div class="coupon"><div class="amt">${won(j.coupon.amount)}</div>용돈교환권<br><span class="muted">${esc(j.coupon.memo)}</span></div><button class="btn" onclick="closeModal()">고마워요 아빠!</button>`);
+  }catch(e){ modal(`<h2>앗</h2><p class="muted">${esc(e.message)}</p><button class="btn" onclick="closeModal()">확인</button>`); }
+}
+
+/* ---------- 교환권 ---------- */
+async function showCoupons(){
+  go('coupons');
+  try{ const j = await api('init'); COUPONS = j.coupons||[]; ST = Object.assign(ST, j); }catch(e){}
+  document.getElementById('couponList').innerHTML = COUPONS.length ? COUPONS.map(c=>
+    `<div class="coupon ${c.status==='사용 완료'?'used':''}"><div class="amt">${won(c.amount)}</div><b>${esc(c.kind)}</b> · ${esc(c.memo)}<br><span class="muted">${esc(c.date)} · ${esc(c.status)}${c.used?' ('+esc(c.used)+')':''}</span></div>`).join('')
+    : '<p class="muted">아직 교환권이 없어요. 레벨테스트를 통과해 보세요!</p>';
+}
+
+/* ---------- 아빠 화면 ---------- */
+let DAD_PIN = '', dadTimer = null;
+async function dadLogin(){
+  DAD_PIN = document.getElementById('pinIn').value.trim();
+  try{
+    const j = await api('dad', {pin: DAD_PIN});
+    sset('yg_pin', DAD_PIN);
+    document.getElementById('dadLogin').style.display='none';
+    document.getElementById('dadBody').style.display='';
+    document.getElementById('rAmt').value = j.defaultAmount;
+    document.getElementById('kidLink').value = location.origin + location.pathname + '#s=' + encodeURIComponent(SERVER);
+    renderDad(j);
+    clearInterval(dadTimer); dadTimer = setInterval(dadRefresh, DAD_REFRESH_SEC*1000);
+  }catch(e){ document.getElementById('dadMsg').textContent = e.message; if(e.res && e.res.pinError) sset('yg_pin',''); }
+}
+async function dadRefresh(){ if(document.hidden) return; try{ renderDad(await api('dad',{pin:DAD_PIN})); }catch(e){} }
+function renderDad(j){
+  document.getElementById('dadStatus').innerHTML =
+    `<div style="font-size:18px;font-weight:700"><span class="dot ${j.studying?'live':''}"></span>${j.studying?'지우 지금 공부 중! ('+j.sessionMin+'분째)':'지금은 쉬는 중'}</div>
+     <p class="muted">오늘 ${j.todayMin}분 · 전체 ${j.totalMin}분 · 지금 레벨 ${j.level}</p>`;
+  document.getElementById('dadReward').innerHTML = j.reward
+    ? `<div class="coupon"><b>예약 중:</b> 공부 <b>${j.reward.remainMin}분</b> 더 하면 ${won(j.reward.amount)} ${j.reward.memo?'· '+esc(j.reward.memo):''}<br><span class="muted">${esc(j.reward.setAt)} 예약 · 새로 예약하면 바뀌어요</span><button class="btn small gray" onclick="dadCancel()">예약 취소</button></div>`
+    : '<p class="muted">예약된 보상 없음</p>';
+  let pg = '';
+  j.bank.forEach(L=>{
+    const t = j.tests[L.lv];
+    const done = L.stages.filter(s=>j.cleared[s.id]).length;
+    pg += `<div style="margin:8px 0">${t.passed?'🏆':t.open?'🔓':'🔒'} <b>레벨 ${L.lv}</b> ${esc(L.name)} — 사과 ${done}/${L.stages.length}${t.waitMin?` · 테스트 ${fmtWait(t.waitMin)} 대기 <button class="chip" onclick="dadClear(${L.lv})">지금 다시 보게 하기</button>`:''}</div>`;
+  });
+  document.getElementById('dadProg').innerHTML = pg;
+  document.getElementById('dadCoupons').innerHTML = j.coupons.length ? j.coupons.map(c=>
+    `<div class="coupon ${c.status==='사용 완료'?'used':''}"><div class="amt">${won(c.amount)}</div>${c.no}번 · ${esc(c.kind)} · ${esc(c.memo)}<br><span class="muted">${esc(c.date)} · ${esc(c.status)}${c.used?' ('+esc(c.used)+')':''}</span>
+     ${c.status!=='사용 완료'?`<button class="btn small" onclick="dadUse(${c.no})">용돈 줬어요 → 사용 완료</button>`:''}</div>`).join('') : '<p class="muted">아직 없음</p>';
+  document.getElementById('dadLog').textContent = j.log.join('\n') || '기록 없음';
+}
+function quickMin(m){ document.getElementById('rMin').value = m; }
+async function dadSet(){
+  try{ renderDad(await api('dadSetReward', {pin:DAD_PIN, minutes:document.getElementById('rMin').value, amount:document.getElementById('rAmt').value, memo:document.getElementById('rMemo').value})); toast('🎁 보상을 예약했어요'); }
+  catch(e){ toast(e.message); }
+}
+async function dadCancel(){ try{ renderDad(await api('dadCancelReward',{pin:DAD_PIN})); toast('예약을 취소했어요'); }catch(e){ toast(e.message); } }
+async function dadUse(no){ try{ renderDad(await api('dadUseCoupon',{pin:DAD_PIN, no})); toast(no+'번 사용 완료'); }catch(e){ toast(e.message); } }
+async function dadClear(lv){ try{ renderDad(await api('dadClearCooldown',{pin:DAD_PIN, level:lv})); toast('레벨 '+lv+' 테스트를 바로 볼 수 있어요'); }catch(e){ toast(e.message); } }
+async function copyLink(){ const v = document.getElementById('kidLink').value; try{ await navigator.clipboard.writeText(v); toast('복사했어요. 지우에게 보내 주세요'); }catch(e){ document.getElementById('kidLink').select(); toast('길게 눌러 복사하세요'); } }
+
+boot();
+</script>
+</body>
+</html>
