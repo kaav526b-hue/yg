@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<meta name="color-scheme" content="only light"><!-- [v2.2] 폰 다크 모드가 앱을 억지로 어둡게 바꾸지 않게 -->
+<meta name="color-scheme" content="light dark"><!-- [v2.7] 삼성 인터넷 억지 다크 대응 (확실하지 않음) --><!-- [v2.2] 폰 다크 모드가 앱을 억지로 어둡게 바꾸지 않게 -->
 <title>🍎 영공도전</title>
 <link rel="icon" id="favIcon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🍎%3C/text%3E%3C/svg%3E">
 <style>
-:root{color-scheme:only light;--ink:#1d2a3a;--sub:#6b7a8c;--line:#e3e9f0;--bg:#f2f6fb;--card:#fff;--pri:#ff5a5f;--ok:#22b35e;--bad:#ff4d4f;--warn:#ff9f1a;--blue:#3b82f6}
+:root{color-scheme:light;--ink:#1d2a3a;--sub:#6b7a8c;--line:#e3e9f0;--bg:#f2f6fb;--card:#fff;--pri:#ff5a5f;--ok:#22b35e;--bad:#ff4d4f;--warn:#ff9f1a;--blue:#3b82f6}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;color:var(--ink);background:var(--bg)}
 button{font:inherit;border:0;cursor:pointer;color:inherit}
@@ -99,6 +99,21 @@ button:active:not(:disabled){transform:scale(.96);filter:brightness(.9)}
 .xtabs{display:flex;gap:6px;margin:8px 0}
 .xtabs button{flex:1;padding:10px 4px;border-radius:12px;background:#e9edf3;font-weight:700;font-size:14px}
 .xtabs button.on{background:var(--pri);color:#fff}
+/* [v2.7] 달성률, 단계 시험, 한글 배열, 내 단어장 */
+.stg{flex-wrap:wrap}
+.pbar{flex:1 1 100%;display:flex;align-items:center;gap:8px;margin-top:4px}
+.pbar .bar{flex:1;height:8px}
+.pbar .bar i{background:linear-gradient(90deg,#ffb020,#22b35e)}
+.pbar b{font-size:13px;min-width:40px;text-align:right}
+.stbtn{padding:6px 10px;border-radius:10px;background:var(--pri);color:#fff;font-weight:700;font-size:13px;margin-left:6px}
+#qPct{position:fixed;left:50%;top:64px;transform:translateX(-50%);background:#1d2a3af0;color:#fff;padding:8px 14px;border-radius:20px;font-weight:700;font-size:14px;z-index:30;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
+#qPct.on{opacity:1}
+.kopre{font-size:18px;font-weight:700;margin-top:8px;min-height:26px;color:var(--blue)}
+.tok .jo{color:#c2410c}
+.myform input{margin-top:6px}
+.myform .row input{margin-top:0}
+textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-radius:12px;margin-top:6px;min-height:110px;background:#fff;color:var(--ink)}
+.pin{font-size:18px}
 /* [v2.3] 점검 화면 */
 .meter{height:22px;background:#e3e9f0;border-radius:11px;overflow:hidden;margin:8px 0}
 .meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,#22b35e,#ffb020,#ff4d4f);transition:width .08s}
@@ -272,6 +287,7 @@ button:active:not(:disabled){transform:scale(.96);filter:brightness(.9)}
       <p style="font-size:16px;line-height:1.6">🍎 <b>오늘 공부한 단어</b>가 사과에 달려 떨어져요.<br>맞는 영어 버튼을 누르거나 🎤 로 말하면 성공!</p>
       <p class="muted" id="gameInfo"></p>
       <button class="btn" id="gameBtn" onclick="startGame()">게임 시작</button>
+      <button class="btn blue" onclick="startGame('my')">📌 내 단어장으로 게임</button>
     </div>
   </div>
 
@@ -420,13 +436,16 @@ button:active:not(:disabled){transform:scale(.96);filter:brightness(.9)}
 </div>
 
 <div id="toast"></div>
+<div id="qPct"></div>
 <div id="loader"><b>⏳ 불러오는 중…</b></div>
 <div class="modal" id="modal"><div class="mbox" id="mbox"></div></div>
 
 <script>
 /***************************************************************
  * 영공도전_jw 앱 화면
- * VERSION 2.6   [v2.6] 발음 기호(🔊 누르면 단어 아래, 정답 화면, 단어장), 🔁 단어·문장 다시 듣기, 점검 📖 긴 문장 읽기,
+ * VERSION 2.7   [v2.7] 단계 달성률 %(막대·실시간 ▲▼·끝나고 변화), 단계 통과 시험, 예문 문장 배열(영어 배열·한글 배열 조사 자동·가짜 조각),
+ *                      📌 내 단어장(직접 추가·🔍 인터넷 찾기·앱 단어 담기·복습·게임), 삼성 인터넷 다크 모드 대응
+ *               [v2.6] 발음 기호(🔊 누르면 단어 아래, 정답 화면, 단어장), 🔁 단어·문장 다시 듣기, 점검 📖 긴 문장 읽기,
  *                      📚 부록 탭(파닉스 소리표 · 발음 기호표 · 🎤 따라 말하기)
  *               [v2.5] 읽기 속도 와이퍼식 버튼(누를 때마다 보통→천천히→…→아주 천천히→…→빠르게 왔다 갔다, 사람마다 저장, 바로 다시 읽기), 게임: 틀린 단어 더 자주 + 게임 틀리면 ⭐,
  *                      텔레그램·카톡 안 창 소리 안 남 안내 + 크롬으로 열기, 단어 은행 폰에 저장(켜는 속도), 서버 시간 기록
@@ -440,7 +459,8 @@ button:active:not(:disabled){transform:scale(.96);filter:brightness(.9)}
  ***************************************************************/
 
 // ===================== 조절할 값 =====================
-const VERSION = '2.6';            // 앱 화면 버전
+const VERSION = '2.7';            // 앱 화면 버전
+const PCT_TOAST_MS = 1600;        // [v2.7] 답할 때 달성률 ▲▼ 보여 주는 시간(ms)
 const LONG_TEXT = 'Good morning, everyone. My name is Jiwoo, and I am learning English every day. After school, I like to read books and play soccer with my friends.';   // [v2.6] 점검 화면 긴 문장 (속도 확인용)
 const LOG_ON = true;              // [v2.3] 점검 기록(마이크·목소리·오류)을 서버 '점검기록' 시트로 보냄 (false면 끔)
 const LOG_SEND_SEC = 30;          // [v2.3] 점검 기록을 모아서 보내는 간격(초)
@@ -883,6 +903,7 @@ async function boot(){
     dlog('boot', devInfo());   // [v2.3]
     setTimeout(webviewNotice, 800);   // [v2.5]
     BANK.forEach(L=>L.stages.forEach(st=>st.words.forEach(w=>{ w.lv = L.lv; w.phonics = L.phonics; WMAP[w.id] = w; })));
+    if(ST.my) setMy(ST.my);   // [v2.7] 내 단어장 단어도 게임·단어장에서 쓰게
     document.getElementById('verLine').textContent = '앱 v'+VERSION+' · 서버 v'+j.version;
     clearInterval(beatTimer); beatTimer = setInterval(beat, BEAT_SEC*1000);
     if(!ST.diagDone){ document.getElementById('diagName').textContent = ST.name; go('diagIntro'); return; }
@@ -977,8 +998,14 @@ function renderHome(){
   document.getElementById('boardCount').textContent = '조각 '+L.board.opened.length+' / '+L.board.pieces;
   document.getElementById('boardHome').innerHTML = boardHTML(L.board);
   document.getElementById('stageTitle').textContent = LV(L.lv)+' · '+L.name+' 단계';
-  document.getElementById('stageList').innerHTML = L.stages.map((s,i)=>
-    `<div class="stg"><span>${s.open?'✅':'🧩'} ${i+1}. ${esc(s.name)}</span><span class="muted">외움 ${s.learned}/${s.total}</span></div>`).join('');
+  document.getElementById('stageList').innerHTML = L.stages.map((s,i)=>{   // [v2.7] 달성률 막대 + 단계 시험
+    const pct = s.pct || 0;
+    const right = s.open ? '<span style="color:var(--ok);font-weight:700">✅ 통과</span>'
+      : s.ready ? `<button class="stbtn" onclick="confirmStageTest(${L.lv},${i})">📝 단계 시험</button>`
+      : `<span class="muted">외움 ${s.learned}/${s.total}</span>`;
+    return `<div class="stg"><span>${s.open?'✅':'🧩'} ${i+1}. ${esc(s.name)}</span>${right}
+      <div class="pbar"><div class="bar"><i style="width:${s.open?100:pct}%"></i></div><b>${s.open?100:pct}%</b></div></div>`;
+  }).join('') + (ST.rules.stageTest ? `<p class="muted">달성률 100%가 되면 단계 시험! ${ST.rules.stagePass}점 넘으면 조각이 열려요. 맞히면 오르고 틀리면 내려가요.</p>` : '');
   let t = '';
   if(L.passed) t = '<p class="muted">레벨테스트 통과 완료!</p>';
   else if(!L.board.done) t = `<button class="btn gray small" disabled>📝 레벨테스트 (그림판 조각을 다 열면 열려요)</button>`;
@@ -1034,12 +1061,13 @@ async function startStudy(more){
 }
 function startQuiz(mode, qs, extra){
   Q = Object.assign({mode, qs, i:-1, results:[], answers:[], pending:[], pieces:[], right:0, tRight:0, tWrong:0, timer:0, lock:false, flushing:Promise.resolve()}, extra||{});
-  document.getElementById('qScore').innerHTML = mode==='test' ? '<span style="color:var(--ok)">⭕ 0</span> <span style="color:var(--bad)">❌ 0</span>' : '';   // [v2.2]
+  document.getElementById('qScore').innerHTML = (mode==='test' || mode==='stest') ? '<span style="color:var(--ok)">⭕ 0</span> <span style="color:var(--bad)">❌ 0</span>' : '';   // [v2.2]
   document.getElementById('qTimerWrap').style.display = mode==='test' ? '' : 'none';
   refreshSpeedUI();   // [v2.5]
   go('quiz'); nextQ();
 }
 function nextQ(){
+  if(!Q) return;   // [v2.7] 그만둔 뒤 늦게 오는 다음 문제 막기
   clearInterval(Q.timer); stopMic();
   Q.i++; Q.lock = false;
   if(Q.i >= Q.qs.length){ finishQuiz(); return; }
@@ -1051,11 +1079,11 @@ function nextQ(){
   Q.type = type; Q.tries = 0;
   const showAns = SHOWANS && ADMIN_PIN;
   let h = '';
-  if(type==='arrange') h = arrangeHTML(q, showAns);
+  if(type==='arrange' || type==='sent_en' || type==='sent_ko') h = arrangeHTML(q, showAns);   // [v2.7]
   else if(type==='speak') h = speakHTML(q, showAns);
   else h = choiceHTML(q, type, showAns);
   document.getElementById('qArea').innerHTML = h;
-  if(type==='arrange') Q.placed = [];
+  if(type==='arrange' || type==='sent_en' || type==='sent_ko') Q.placed = [];
   if(['sound','pic','listen'].includes(type) || (type==='meaning')) setTimeout(()=>say(q.say), 250);
   if(Q.mode==='test') startTimer();
 }
@@ -1090,7 +1118,7 @@ function choose(k, btn){
   if(Q.mode === 'diag'){ Q.answers.push(k); btn.classList.add('picked'); sfx('tap'); setTimeout(nextQ, 180); return; }
   const ok = k === q.answer;
   markChoice(q, k, ok);
-  if(Q.mode === 'test'){ Q.answers.push(k); testCount(ok); setTimeout(nextQ, TEST_NEXT_MS); return; }   // [v2.2] 테스트도 바로 ⭕/❌
+  if(Q.mode === 'test' || Q.mode === 'stest'){ Q.answers.push(k); testCount(ok); setTimeout(nextQ, TEST_NEXT_MS); return; }   // [v2.2] 테스트도 바로 ⭕/❌ [v2.7] 단계 시험
   record(q, ok);
   feedback(q, ok);
 }
@@ -1111,22 +1139,51 @@ function dunno(){
   const q = Q.qs[Q.i];
   Q.lock = true; lastAnswerAt = Date.now(); stopMic();
   if(Q.mode === 'diag'){ Q.answers.push(-1); sfx('tap'); setTimeout(nextQ, 150); return; }
-  if(Q.mode === 'test'){ Q.answers.push(-1); markChoice(q, -1, false); testCount(false); setTimeout(nextQ, TEST_NEXT_MS); return; }
-  if(Q.type !== 'arrange' && Q.type !== 'speak') markChoice(q, -1, false); else sfx('bad');
+  if(Q.mode === 'test' || Q.mode === 'stest'){
+    const isArr = ['arrange','sent_en','sent_ko'].includes(Q.type);
+    Q.answers.push(isArr ? '' : -1); if(!isArr) markChoice(q, -1, false); else showArrAnswer(q, false);
+    testCount(false); setTimeout(nextQ, isArr ? TEST_NEXT_MS+900 : TEST_NEXT_MS); return; }
+  if(!['arrange','sent_en','sent_ko','speak'].includes(Q.type)) markChoice(q, -1, false); else sfx('bad');
   record(q, false);
   feedback(q, false, true);
 }
+/* [v2.7] 답하면 단계 달성률을 바로 계산해서 ▲▼로 보여 줘요 (서버 규칙과 같게: 맞히면 +1, 틀리면 -2, 점수는 최대 learnedBox) */
+function pctMove(q, ok){
+  if(typeof q.lv !== 'number' || q.st == null || q.st < 0 || q.box == null) return;
+  const L = ST.levels[q.lv-1], st = L && L.stages[q.st]; if(!st || !st.max) return;
+  const LB = ST.rules.learnedBox || 3;
+  const nb = ok ? Math.min(5, q.box+1) : Math.max(0, q.box-2);
+  const d = Math.min(nb, LB) - Math.min(q.box, LB);
+  q.box = nb;
+  const key = q.lv+':'+q.st;
+  if(!Q.pctStart) Q.pctStart = {};
+  if(Q.pctStart[key] == null) Q.pctStart[key] = st.pct || 0;
+  const before = st.pct || 0;
+  st.pts = Math.max(0, Math.min(st.max, (st.pts||0) + d));
+  st.pct = Math.floor(st.pts / st.max * 100);
+  const el = document.getElementById('qPct');
+  el.innerHTML = `📈 ${esc(st.name)}  ${before}% → ${st.pct}% ${st.pct>before?'<span style="color:#7CFC9A">▲</span>':st.pct<before?'<span style="color:#ff8a8a">▼</span>':'＝'}`;
+  el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('on'), PCT_TOAST_MS);
+}
+function pctSummary(q){
+  if(!q.pctStart) return '';
+  return Object.keys(q.pctStart).map(k=>{ const [lv,si] = k.split(':').map(Number); const st = ST.levels[lv-1].stages[si];
+    return `<div class="kv"><span>${esc(LV(lv))} · ${esc(st.name)}</span><b>${q.pctStart[k]}% → ${st.pct}% ${st.pct>q.pctStart[k]?'▲':st.pct<q.pctStart[k]?'▼':''}</b></div>`; }).join('');
+}
+
 /* 공부 결과 기록 + 피드백 */
 function record(q, ok, skip){
   Q.results.push({id:q.id, ok:!!ok, skip:!!skip});
+  if(!skip) pctMove(q, ok);   // [v2.7]
   if(!skip && ok) Q.right++;
   if(Q.results.length - (Q.flushed||0) >= FLUSH_EVERY) flush();
 }
 function feedback(q, ok, dunnoFlag){
   const isG = q.type==='arrange';
-  say(isG ? q.en : (q.type==='blank' && q.ex ? q.ex : q.en));
+  say(isG ? q.en : (['blank','sent_en','sent_ko'].includes(q.type) && q.ex ? q.ex : q.en));   // [v2.7]
   const sent = isG ? q.en : q.ex;   // [v2.6] 다시 들을 문장
-  const replay = `<div class="replay">${isG?'':`<button onclick="say('${jsq(q.en)}')">🔁 단어 다시 듣기</button>`}${sent?`<button onclick="say('${jsq(sent)}')">🔁 문장 다시 듣기</button>`:''}</div>`;
+  const pinBtn = (!isG && /^w/.test(q.id)) ? `<button onclick="togglePin('${jsq(q.id)}', this)">${isPinned(q.id)?'📌 내 단어장에서 빼기':'📌 내 단어장에 넣기'}</button>` : '';   // [v2.7]
+  const replay = `<div class="replay">${isG?'':`<button onclick="say('${jsq(q.en)}')">🔁 단어 다시 듣기</button>`}${sent?`<button onclick="say('${jsq(sent)}')">🔁 문장 다시 듣기</button>`:''}${pinBtn}</div>`;
   const extra = isG ? `<div class="qmid" style="font-size:17px">${esc(q.en)}</div><div class="muted">${esc(q.note)}</div>${replay}`
     : `<div>${q.emo?`<span style="font-size:26px">${q.emo}</span> `:''}<b style="font-size:18px">${esc(q.en)}</b> ${q.ipa?`<span class="ipa" style="display:inline">[${esc(q.ipa)}]</span>`:''} · ${esc(q.ko)}</div>${q.ex?`<div class="muted" style="margin-top:4px">${esc(q.ex)}<br>${esc(q.exKo)}</div>`:''}${replay}`;
   const fb = document.getElementById('fbArea');
@@ -1139,7 +1196,29 @@ function feedback(q, ok, dunnoFlag){
 }
 
 /* 문장 배열 */
+/* [v2.7] 받침에 따라 조사 자동 (이/가, 을/를, 은/는, 와/과, 으로/로) */
+const JO = {'이':['이','가'],'가':['이','가'],'을':['을','를'],'를':['을','를'],'은':['은','는'],'는':['은','는'],'과':['과','와'],'와':['과','와'],'으로':['으로','로'],'로':['으로','로']};
+function josa(word, p){
+  if(!p) return '';
+  const pair = JO[p]; if(!pair) return p;
+  const c = word.charCodeAt(word.length-1);
+  if(c < 0xAC00 || c > 0xD7A3) return /[0-9]$/.test(word) ? pair[0] : pair[1];   // 한글이 아니면 대충
+  const jong = (c - 0xAC00) % 28;
+  if(pair[0] === '으로') return (jong === 0 || jong === 8) ? '로' : '으로';   // ㄹ 받침은 '로'
+  return jong ? pair[0] : pair[1];
+}
 function arrangeHTML(q, showAns){
+  if(q.type === 'sent_en' || q.type === 'sent_ko'){
+    const ko = q.type === 'sent_ko';
+    return `<div class="qbox"><div class="qkind">${ko ? '영어 문장을 우리말로 풀어 보세요 <span class="muted">(조사는 자동)</span>' : '우리말에 맞게 영어 문장을 만들어 보세요'}</div>
+      <div class="qmid">${esc(q.prompt)}</div>${ko?`<button class="qsay" onclick="say('${jsq(q.prompt)}')">🔊</button>`:''}
+      <div class="slot" id="slot"></div>${ko?'<div class="kopre" id="koPre"></div>':''}
+      ${showAns?`<div class="muted" style="color:#b07a00">정답: ${esc(ko ? q.answer.split('|').join(' ') : q.answer)}</div>`:''}
+      ${q.tokens.length > q.need ? `<p class="muted">⚠️ 필요 없는 조각도 섞여 있어요 (${q.need}개만 써요)</p>` : ''}</div>
+      <div class="pool" id="pool">${q.tokens.map((t,k)=>`<button class="tok" data-k="${k}" onclick="placeTok(${k})">${esc(t)}</button>`).join('')}</div>
+      <div class="row"><button class="btn gray" onclick="clearTok()">다시</button><button class="btn" id="arrOk" onclick="checkArrange()" disabled>확인</button></div>
+      <button class="dunno" onclick="dunno()">🤷 모르겠어요</button><div id="fbArea"></div>`;
+  }
   return `<div class="qbox"><div class="qkind">영어 문장을 만들어 보세요</div><div class="qmid">${esc(q.ko)}</div>
     <div class="slot" id="slot"></div>${showAns?`<div class="muted" style="color:#b07a00">정답: ${esc(q.answer)}</div>`:''}</div>
     <div class="pool" id="pool">${q.tokens.map((t,k)=>`<button class="tok" data-k="${k}" onclick="placeTok(${k})">${esc(t)}</button>`).join('')}</div>
@@ -1161,14 +1240,26 @@ function unplace(pos){
 }
 function clearTok(){ if(Q.lock) return; Q.placed = []; document.querySelectorAll('#pool .tok').forEach(t=>t.classList.remove('used')); drawSlot(Q.qs[Q.i]); }
 function drawSlot(q){
-  document.getElementById('slot').innerHTML = Q.placed.map((k,p)=>`<button class="tok" onclick="unplace(${p})">${esc(q.tokens[k])}</button>`).join('');
-  document.getElementById('arrOk').disabled = Q.placed.length !== q.tokens.length;
+  const ko = q.type === 'sent_ko';   // [v2.7] 한글 배열은 놓은 자리에 맞는 조사가 자동으로 붙어요
+  document.getElementById('slot').innerHTML = Q.placed.map((k,p)=>{ const w = q.tokens[k]; const j = ko ? josa(w, q.parts[p]) : '';
+    return `<button class="tok" onclick="unplace(${p})">${esc(w)}${j?`<span class="jo">${esc(j)}</span>`:''}</button>`; }).join('');
+  if(ko){ const pre = document.getElementById('koPre'); if(pre) pre.textContent = Q.placed.map((k,p)=>q.tokens[k]+josa(q.tokens[k], q.parts[p])).join(' '); }
+  document.getElementById('arrOk').disabled = Q.placed.length !== (q.need || q.tokens.length);
+}
+/* 단계 시험에서 배열 정답 보여 주기 */
+function showArrAnswer(q, ok){
+  const ans = q.type === 'sent_ko' ? q.answer.split('|').map((w,p)=>w+josa(w, q.parts[p])).join(' ') : q.answer;
+  const fb = document.getElementById('fbArea');
+  if(fb) fb.innerHTML = `<div class="fb ${ok?'good':'bad'}"><b style="color:var(${ok?'--ok':'--bad'})">${ok?'⭕ 정답!':'❌ 정답은'}</b><div class="qmid" style="font-size:16px">${esc(ans)}</div></div>`;
+  sfx(ok ? 'ok' : 'bad');
 }
 function checkArrange(){
   if(Q.lock) return;
   const q = Q.qs[Q.i];
   Q.lock = true; lastAnswerAt = Date.now();
-  const ok = Q.placed.map(k=>q.tokens[k]).join(' ') === q.answer;
+  const given = Q.placed.map(k=>q.tokens[k]).join(q.type === 'sent_ko' ? '|' : ' ');   // [v2.7]
+  const ok = given === q.answer;
+  if(Q.mode === 'stest'){ Q.answers.push(given); showArrAnswer(q, ok); testCount(ok); setTimeout(nextQ, TEST_NEXT_MS+900); return; }
   sfx(ok ? 'ok' : 'bad');   // [v2.2]
   record(q, ok); feedback(q, ok);
 }
@@ -1247,10 +1338,28 @@ async function finishQuiz(quit){
     modal(`<div style="font-size:56px">${q.goalHit?'🎉':'📚'}</div><h2>${quit?'여기까지!':'학습 끝!'}</h2>
       <p style="font-size:18px">${q.right} / ${n} 정답</p>
       <p>오늘 ${ST.todayDone} / ${ST.goal}문제 ${goal?'✅':''}</p>
+      ${pctSummary(q)?`<div class="card" style="text-align:left;margin:8px 0"><b>📈 달성률</b>${pctSummary(q)}</div>`:''}
       ${q.goalHit?`<p><b>🔥 ${ST.streak}일째 연속 학습!</b></p>`:''}
       <div class="row"><button class="btn gray" onclick="closeModal();showTab('tabGame')">🎮 게임으로 복습</button><button class="btn" onclick="afterStudyModal()">확인</button></div>`);
     if(q.goalHit) confetti();
     PENDING_PIECES = q.pieces;
+    return;
+  }
+  if(q.mode==='stest'){   // [v2.7] 단계 시험 채점
+    document.getElementById('qArea').innerHTML = '<div class="qbox"><div class="qmid">채점 중...</div></div>';
+    try{
+      const j = await api('stageTestSubmit', {answers:q.answers});
+      ST = Object.assign(ST, j); Q = null;
+      const r = j.result;
+      enterMain(); showTab('tabStudy');
+      const wrong = r.review.filter(x=>!x.ok).map(x=>x.word);
+      if(r.pass) confetti();
+      modal(`<div style="font-size:60px">${r.pass?'🧩':'💪'}</div><h2>${esc(r.stageName)} ${r.score}점 ${r.pass?'통과!':'아쉬워요'}</h2>
+        <p class="muted">${r.pass?'조각이 열려요!':r.passScore+'점 넘으면 통과! 틀린 단어는 달성률이 내려가요. 다시 100%를 만들면 재도전!'}</p>
+        ${wrong.length?`<p class="muted">틀린 문제: ${esc(wrong.join(', '))}</p>`:''}
+        <button class="btn" onclick="closeModal();showPieces(PENDING_PIECES);PENDING_PIECES=[]">확인</button>`);
+      PENDING_PIECES = j.newPieces || [];
+    }catch(e){ toast(e.message); enterMain(); }
     return;
   }
   if(q.mode==='diag'){
@@ -1303,6 +1412,19 @@ function showPieces(pieces){
   }, 500);
 }
 
+/* ---------- [v2.7] 단계 통과 시험 ---------- */
+function confirmStageTest(lv, si){
+  const st = ST.levels[lv-1].stages[si];
+  modal(`<div style="font-size:54px">📝</div><h2>${esc(LV(lv))} · ${esc(st.name)} 단계 시험</h2><p>단어 ${st.total}개 + 문장 배열 · <b>${ST.rules.stagePass}점 이상</b>이면 조각이 열려요!</p><p class="muted">시간 제한은 없어요. 틀린 단어는 달성률이 내려가요.</p>
+  <div class="row"><button class="btn gray" onclick="closeModal()">나중에</button><button class="btn" onclick="closeModal();startStageTest(${lv},${si})">시작!</button></div>`);
+}
+async function startStageTest(lv, si){
+  try{
+    const j = await api('stageTestStart', Object.assign({level:lv, stage:si}, ADMIN_PIN ? {pin:ADMIN_PIN} : {}));
+    startQuiz('stest', j.questions, {level:lv, stage:si});
+  }catch(e){ toast(e.message); }
+}
+
 /* ---------- 레벨테스트 ---------- */
 function confirmTest(lv){
   modal(`<div style="font-size:54px">📝</div><h2>${LV(lv)} 테스트</h2><p>${ST.rules.testCount}문제 · 문제당 ${ST.rules.testSec}초<br><b>${ST.rules.passScore}점 이상</b>이면 통과 → 다음 레벨!</p><p class="muted">시작하면 중간에 그만둘 수 없어요. 떨어지면 ${ST.rules.retryHours}시간 뒤에 다시 볼 수 있어요.</p>
@@ -1323,8 +1445,10 @@ function goWrongNote(){ WTAB = 0; showTab('tabWords'); }
 async function renderWords(){
   if(WTAB === null || WTAB === undefined) WTAB = ST.level;
   const chips = myLevels(ST.levels).filter(l=>l.open).map(l=>`<button class="${WTAB===l.lv?'on':''}" onclick="WTAB=${l.lv};renderWords()">${LV(l.lv)}</button>`).join('');   // [v2.4]
-  document.getElementById('wordChips').innerHTML = `<button class="${WTAB===0?'on':''}" onclick="WTAB=0;renderWords()">📒 오답노트</button>`+chips;
+  document.getElementById('wordChips').innerHTML = `<button class="${WTAB==='my'?'on':''}" onclick="WTAB='my';renderWords()">📌 내 단어장</button><button class="${WTAB===0?'on':''}" onclick="WTAB=0;renderWords()">📒 오답노트</button>`+chips;
   const box = document.getElementById('wordList');
+  document.getElementById('wordHelp').textContent = WTAB==='my' ? '자주 잊는 단어, 전기 용어처럼 내가 넣고 싶은 단어를 모아요.' : '⭐ 다음 학습에 먼저 · 📌 내 단어장에 담기';
+  if(WTAB==='my'){ renderMy(); return; }   // [v2.7]
   box.innerHTML = '<p class="muted">불러오는 중...</p>';
   try{
     const j = await api('words', WTAB===0 ? {wrongOnly:true} : {level:WTAB}, {quiet:true});
@@ -1332,7 +1456,7 @@ async function renderWords(){
     box.innerHTML = j.words.map(w=>{
       const st = w.box<0 ? '⬜' : w.box>=3 ? '✅' : '🟨';
       return `<div class="word"><span class="e">${w.emo||st}</span><div><div class="en">${esc(w.en)} ${w.ipa?`<span class="ipa" style="display:inline;font-size:14px;font-weight:400">[${esc(w.ipa)}]</span>`:''} ${w.emo?st:''}</div><div class="ko">${esc(w.ko)}${w.wrong?' · <span style="color:var(--bad)">틀림 '+w.wrong+'</span>':''}</div></div>
-        <div class="r"><button onclick="say('${jsq(w.en)}')">🔊</button><button id="st_${w.id.replace(/\W/g,'_')}" onclick="starWord('${jsq(w.id)}', ${w.star?0:1})">${w.star?'⭐':'☆'}</button></div></div>`;
+        <div class="r"><button onclick="say('${jsq(w.en)}')">🔊</button><button id="st_${w.id.replace(/\W/g,'_')}" onclick="starWord('${jsq(w.id)}', ${w.star?0:1})">${w.star?'⭐':'☆'}</button><button class="pin" style="opacity:${isPinned(w.id)?1:.35}" onclick="togglePin('${jsq(w.id)}', this)">📌</button></div></div>`;
     }).join('') + '<p class="muted">⬜ 새 단어 · 🟨 학습 중 · ✅ 외움</p>';
   }catch(e){ box.innerHTML = '<p class="muted">'+esc(e.message)+'</p>'; }
 }
@@ -1423,6 +1547,95 @@ function xSpeak(word, id, btn){
 }
 
 /* =============================================================
+ *  📌 내 단어장 [v2.7]
+ * ============================================================= */
+function myState(){ return (ST && ST.my) || {words:[], pins:[], max:150}; }
+function isPinned(id){ return myState().pins.indexOf(id) >= 0; }
+function setMy(my){
+  ST.my = my;
+  (my.words||[]).forEach(w=>{ WMAP[w.id] = Object.assign({lv:'m', emo:'', alt:[]}, w); });
+}
+async function togglePin(id, btn){
+  const on = !isPinned(id);
+  try{ const j = await api('myPin', {id, on}, {quiet:true}); setMy(j.my); sfx('tap');
+    toast(on ? '📌 내 단어장에 넣었어요' : '내 단어장에서 뺐어요');
+    if(btn){ if(btn.classList.contains('pin')) btn.style.opacity = on ? 1 : .35; else btn.textContent = on ? '📌 내 단어장에서 빼기' : '📌 내 단어장에 넣기'; }
+  }catch(e){ toast(e.message); }
+}
+let MY_EDIT = null;
+function myFormHTML(w){
+  w = w || {};
+  return `<div class="myform"><b>${MY_EDIT?'✏️ 고치기':'✏️ 직접 추가'}</b>
+    <div class="row" style="margin-top:6px"><input id="myEn" placeholder="영어 (예: voltage)" value="${esc(w.en||'')}"><button class="btn small blue" style="flex:0 0 86px;margin:0" onclick="myLookup()">🔍 찾기</button></div>
+    <input id="myKo" placeholder="뜻 (예: 전압)" value="${esc(w.ko||'')}">
+    <input id="myIpa" placeholder="발음 기호 (안 써도 돼요)" value="${esc(w.ipa||'')}">
+    <input id="myEx" placeholder="예문 (안 써도 돼요)" value="${esc(w.ex||'')}">
+    <input id="myExKo" placeholder="예문 뜻 (안 써도 돼요)" value="${esc(w.exKo||'')}">
+    <p class="muted" id="myMsg">🔍 찾기를 누르면 인터넷에서 발음 기호·뜻·예문을 채워 줘요. 전기 용어처럼 뜻이 다르면 고쳐서 저장하세요.</p>
+    <div class="row"><button class="btn small gray" onclick="MY_EDIT=null;renderMy()">${MY_EDIT?'취소':'지우기'}</button><button class="btn small" onclick="mySave()">💾 저장</button></div>
+    ${MY_EDIT?'':`<details style="margin-top:8px"><summary class="muted">📋 여러 개 한 번에 붙여 넣기</summary>
+      <textarea id="myBulk" placeholder="한 줄에 하나씩: 영어|뜻|예문|예문뜻
+voltage|전압
+current|전류|The current is too high.|전류가 너무 높아요."></textarea>
+      <button class="btn small" onclick="myBulkSave()">💾 모두 저장</button></details>`}</div>`;
+}
+function renderMy(){
+  const my = myState(), box = document.getElementById('wordList');
+  const pinned = my.pins.map(id=>WMAP[id]).filter(Boolean);
+  const all = my.words.length + pinned.length;
+  const row = (w, custom) => {
+    const st = w.box==null||w.box<0 ? '⬜' : w.box>=3 ? '✅' : '🟨';
+    return `<div class="word"><span class="e">${custom?st:'📌'}</span><div><div class="en">${esc(w.en)} ${w.ipa?`<span class="ipa" style="display:inline;font-size:14px;font-weight:400">[${esc(w.ipa)}]</span>`:''}</div><div class="ko">${esc(w.ko)}${custom?'':' · <span class="muted">앱 단어</span>'}</div>${w.ex?`<div class="muted" style="font-size:12px">${esc(w.ex)}</div>`:''}</div>
+      <div class="r"><button onclick="say('${jsq(w.en)}')">🔊</button>${custom?`<button onclick="myEditStart('${jsq(w.id)}')">✏️</button>`:''}<button onclick="${custom?`myDel('${jsq(w.id)}')`:`togglePin('${jsq(w.id)}');setTimeout(renderMy,600)`}">🗑</button></div></div>`;
+  };
+  box.innerHTML = myFormHTML(MY_EDIT ? my.words.find(w=>w.id===MY_EDIT) : null) +
+    `<div class="row" style="margin:12px 0 4px"><button class="btn small" ${all?'':'disabled'} onclick="startMyStudy()">📌 내 단어장 복습 (${all})</button><button class="btn small blue" ${all>=GAME_MIN_WORDS?'':'disabled'} onclick="startGame('my')">🎮 게임</button></div>
+    <p class="muted">직접 넣은 단어 ${my.words.length} / ${my.max} · 담은 앱 단어 ${pinned.length}</p>` +
+    (all ? my.words.map(w=>row(w, true)).join('') + pinned.map(w=>row(w, false)).join('') : '<p class="muted">아직 없어요. 위에서 넣거나, 공부하다가 📌 를 눌러 담아요.</p>');
+}
+function myEditStart(id){ MY_EDIT = id; renderMy(); window.scrollTo(0,0); }
+async function myLookup(){
+  const en = document.getElementById('myEn').value.trim();
+  const msg = document.getElementById('myMsg');
+  if(!en){ toast('영어 단어를 먼저 써 주세요'); return; }
+  msg.textContent = '🔍 찾는 중…';
+  try{
+    const j = await api('myLookup', {en});
+    const set = (id, v)=>{ const el = document.getElementById(id); if(v && !el.value.trim()) el.value = v; };
+    set('myKo', j.ko); set('myIpa', j.ipa); set('myEx', j.ex); set('myExKo', j.exKo);
+    msg.textContent = (j.found ? '✅ 찾았어요. ' : '⚠️ 사전에는 없어서 뜻만 번역했어요. ') + (j.ex ? '' : '예문은 사전에 없어요. ') + '맞게 고친 다음 💾 저장하세요.' + (j.err ? ' ('+j.err+')' : '');
+  }catch(e){ msg.textContent = '못 찾았어요: ' + e.message; }
+}
+async function mySave(){
+  const v = (id)=>document.getElementById(id).value.trim();
+  const w = {en:v('myEn'), ko:v('myKo'), ipa:v('myIpa'), ex:v('myEx'), exKo:v('myExKo')};
+  if(!w.en || !w.ko){ toast('영어와 뜻은 꼭 써 주세요'); return; }
+  try{
+    const j = MY_EDIT ? await api('myEdit', Object.assign({id:MY_EDIT}, w)) : await api('myAdd', {items:[w]});
+    setMy(j.my);
+    if(!MY_EDIT && !j.added){ toast('저장 안 됨: '+esc((j.skipped||[]).join(', '))); return; }
+    MY_EDIT = null; toast('💾 저장했어요'); renderMy();
+  }catch(e){ toast(e.message); }
+}
+async function myBulkSave(){
+  const items = document.getElementById('myBulk').value.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{ const a = l.split('|').map(x=>x.trim()); return {en:a[0], ko:a[1], ex:a[2], exKo:a[3]}; });
+  if(!items.length){ toast('붙여 넣은 내용이 없어요'); return; }
+  try{ const j = await api('myAdd', {items}); setMy(j.my); toast('💾 '+j.added+'개 저장'+(j.skipped.length?' · 건너뜀 '+j.skipped.length+'개':'')); renderMy(); }
+  catch(e){ toast(e.message); }
+}
+function myDel(id){
+  modal(`<h2>지울까요?</h2><p class="muted">${esc((WMAP[id]||{}).en||'')} 를 내 단어장에서 지워요.</p><div class="row"><button class="btn gray" onclick="closeModal()">취소</button><button class="btn" onclick="closeModal();myDelGo('${jsq(id)}')">지우기</button></div>`);
+}
+async function myDelGo(id){ try{ const j = await api('myDel', {id}); setMy(j.my); renderMy(); }catch(e){ toast(e.message); } }
+async function startMyStudy(){
+  try{
+    const j = await api('myStudy', {});
+    if(!j.questions.length){ toast(j.msg || '내 단어장이 비어 있어요'); return; }
+    startQuiz('study', j.questions);
+  }catch(e){ toast(e.message); }
+}
+
+/* =============================================================
  *  🎁 보상
  * ============================================================= */
 async function renderBox(){
@@ -1496,8 +1709,9 @@ function renderGameTab(){
   document.getElementById('gameBtn').disabled = ws.length < GAME_MIN_WORDS;
 }
 let G = null;
-function startGame(){
-  const words = todayWordObjs();
+function startGame(src){
+  const my = myState();
+  const words = src === 'my' ? my.words.map(w=>WMAP[w.id]).concat(my.pins.map(id=>WMAP[id])).filter(Boolean) : todayWordObjs();   // [v2.7] 내 단어장 게임
   if(words.length < GAME_MIN_WORDS){ toast('오늘 공부한 단어가 '+GAME_MIN_WORDS+'개 이상 있어야 해요'); return; }
   const wrongIds = ST.todayWrong || [];   // [v2.5] 오늘 틀린 단어는 GAME_WRONG_WEIGHT배 자주
   const pool = [].concat(...words.map(w=>Array(wrongIds.indexOf(w.id)>=0 ? GAME_WRONG_WEIGHT : 1).fill(w)));
@@ -1527,7 +1741,7 @@ function gNext(){
   a.style.left = (20 + Math.random()*60)+'%';
   field.appendChild(a); G.apple = a;
   let wrong = (w.phonics && w.alt && w.alt.length>=2) ? shuffle(w.alt.slice()).slice(0,2) : shuffle(G.words.filter(x=>x.en!==w.en).map(x=>x.en)).slice(0,2);
-  if(wrong.length < 2){ const L = BANK[w.lv-1]; const more = shuffle([].concat(...L.stages.map(s=>s.words)).filter(x=>x.en!==w.en && wrong.indexOf(x.en)<0).map(x=>x.en)); wrong = wrong.concat(more).slice(0,2); }
+  if(wrong.length < 2){ const L = BANK[(typeof w.lv === 'number' ? w.lv : ST.level)-1]; const more = shuffle([].concat(...L.stages.map(s=>s.words)).filter(x=>x.en!==w.en && wrong.indexOf(x.en)<0).map(x=>x.en)); wrong = wrong.concat(more).slice(0,2); }
   const ch = shuffle([w.en].concat(wrong));
   document.getElementById('gChoices').innerHTML = ch.map(c=>`<button onclick="gPick(this,'${jsq(c)}')">${esc(c)}</button>`).join('');
   gHud();
