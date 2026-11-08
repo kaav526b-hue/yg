@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>영공도전_jw</title>
+<meta name="color-scheme" content="only light"><!-- [v2.2] 폰 다크 모드가 앱을 억지로 어둡게 바꾸지 않게 -->
+<title>🍎 영공도전</title>
+<link rel="icon" id="favIcon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🍎%3C/text%3E%3C/svg%3E">
 <style>
-:root{--ink:#1d2a3a;--sub:#6b7a8c;--line:#e3e9f0;--bg:#f2f6fb;--card:#fff;--pri:#ff5a5f;--ok:#22b35e;--bad:#ff4d4f;--warn:#ff9f1a;--blue:#3b82f6}
+:root{color-scheme:only light;--ink:#1d2a3a;--sub:#6b7a8c;--line:#e3e9f0;--bg:#f2f6fb;--card:#fff;--pri:#ff5a5f;--ok:#22b35e;--bad:#ff4d4f;--warn:#ff9f1a;--blue:#3b82f6}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;color:var(--ink);background:var(--bg)}
 button{font:inherit;border:0;cursor:pointer;color:inherit}
@@ -69,8 +71,27 @@ h2{font-size:18px;margin:16px 0 8px}
 .qsay{background:#eef4ff;border-radius:16px;padding:12px 22px;font-size:28px}
 .blank{color:var(--blue);font-weight:800}
 .opts button{display:block;width:100%;text-align:left;background:#fff;border:2px solid #e1e8f0;border-radius:14px;padding:15px;font-size:18px;margin:8px 0}
-.opts button.right{border-color:var(--ok);background:#e6f8ee}
-.opts button.wrong{border-color:var(--bad);background:#ffecec}
+.opts button.right{border-color:var(--ok);background:var(--ok);color:#fff;font-weight:700}
+.opts button.right::after{content:'  ⭕'}
+.opts button.wrong{border-color:var(--bad);background:var(--bad);color:#fff;font-weight:700;animation:shake .35s}
+.opts button.wrong::after{content:'  ❌'}
+.opts button.picked{border-color:var(--blue);background:#dbe8ff}
+/* [v2.2] 누르는 순간 눌림 효과 */
+button{transition:transform .08s, filter .08s}
+button:active:not(:disabled){transform:scale(.96);filter:brightness(.9)}
+.dunno{display:block;width:100%;background:#fff;color:var(--sub);font-size:16px;padding:13px;margin-top:4px;border:2px dashed #cfd8e3;border-radius:14px}
+#loader{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:58;background:#ffffff55}
+#loader.on{display:flex}
+#loader b{background:#1d2a3a;color:#fff;padding:12px 20px;border-radius:16px;font-size:15px}
+#qScore{font-weight:700;font-size:14px;white-space:nowrap}
+/* [v2.3] 점검 화면 */
+.meter{height:22px;background:#e3e9f0;border-radius:11px;overflow:hidden;margin:8px 0}
+.meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,#22b35e,#ffb020,#ff4d4f);transition:width .08s}
+.kv{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #eef1f5;font-size:14px}
+.kv:last-child{border:0}
+.kv b{white-space:nowrap}
+.heardBox{min-height:28px;font-size:18px;font-weight:700;color:var(--blue);margin-top:4px}
+.chkline{font-size:13px;color:var(--sub);white-space:pre-wrap;line-height:1.5;margin-top:6px}
 .opts button.hintAns{outline:3px dashed #ffb020;outline-offset:2px}
 .fb{border-radius:16px;padding:14px;margin-top:10px;background:#fff;box-shadow:0 2px 8px #0000000f}
 .fb.good{border-left:6px solid var(--ok)}
@@ -173,7 +194,7 @@ h2{font-size:18px;margin:16px 0 8px}
   <h1>🧭 레벨 진단</h1>
   <div class="card">
     <p style="font-size:17px;line-height:1.6">안녕하세요, <b id="diagName"></b>!<br>20문제를 풀면 <b>나에게 맞는 레벨</b>에서 시작해요.</p>
-    <p class="muted">모르는 문제는 그냥 아무거나 골라도 돼요. 점수나 보상과는 상관없어요.</p>
+    <p class="muted"><b>모르면 찍지 말고 "🤷 모르겠어요"를 누르세요.</b> 찍어서 맞으면 너무 어려운 레벨에서 시작해요. 점수나 보상과는 상관없어요.</p>
     <button class="btn" onclick="startDiag()">진단 시작 (20문제)</button>
     <button class="btn gray" onclick="skipDiag()">레벨 1(파닉스)부터 할래요</button>
   </div>
@@ -259,7 +280,7 @@ h2{font-size:18px;margin:16px 0 8px}
 
 <!-- 문제 화면 (학습·진단·테스트 같이 씀) -->
 <div class="scr" id="quiz">
-  <div class="qhead"><button class="qx" onclick="quitQuiz()">✕</button><div class="bar"><i id="qBar"></i></div><span class="muted" id="qCount"></span></div>
+  <div class="qhead"><button class="qx" onclick="quitQuiz()">✕</button><div class="bar"><i id="qBar"></i></div><span id="qScore"></span><span class="muted" id="qCount"></span></div>
   <div class="tbar" id="qTimerWrap" style="display:none"><i id="qTimer"></i></div>
   <div id="qArea"></div>
 </div>
@@ -334,6 +355,35 @@ h2{font-size:18px;margin:16px 0 8px}
   </div>
 </div>
 
+<!-- [v2.3] 🩺 점검 화면 (문제 찾기) -->
+<div class="scr" id="check">
+  <div class="top"><h1>🩺 점검 (문제 찾기)</h1><button class="chip" onclick="closeCheck()">← 돌아가기</button></div>
+  <p class="muted">여기서 한 시험 결과는 자동으로 서버 '점검기록'에 남아요. Claude가 그걸 보고 원인을 찾아요.</p>
+  <div class="card"><b>📱 기기 정보</b><div id="ckInfo" style="margin-top:6px"></div></div>
+  <div class="card"><b>🔊 영어 목소리</b>
+    <p class="muted">목소리를 고르고 ▶ 로 들어 보세요. 고른 목소리로 앱 전체가 읽어 줘요.</p>
+    <select id="ckVoice" onchange="pickUserVoice()"></select>
+    <div class="row" style="margin-top:8px"><span class="muted" style="flex:0 0 auto">속도</span><input id="ckRate" type="range" min="0.6" max="1.2" step="0.05" style="padding:0;margin:0" oninput="setRate(this.value)"><b id="ckRateTxt" style="flex:0 0 40px"></b></div>
+    <div class="row"><button class="btn small" onclick="testSay('egg')">▶ egg</button><button class="btn small" onclick="testSay('ant')">▶ ant</button><button class="btn small" onclick="testSay('The rabbit eats a carrot.')">▶ 문장</button></div>
+  </div>
+  <div class="card"><b>🎚 마이크 소리 크기</b>
+    <p class="muted">시작을 누르고 <span id="ckSec"></span>초 동안 "애플" 하고 말해 보세요. 막대가 움직이면 마이크에 소리가 들어오는 거예요.</p>
+    <div class="meter"><i id="ckMeter"></i></div>
+    <div class="row"><button class="btn small blue" id="ckMicBtn" onclick="micLevelTest()">시작</button><span id="ckMicTxt" class="muted"></span></div>
+  </div>
+  <div class="card"><b>🎤 음성 인식 시험</b>
+    <p class="muted">말하기를 누르고 <b>apple</b> 이라고 말해 보세요. 들리는 대로 글자가 바로 떠요.</p>
+    <div class="heardBox" id="ckHeard">—</div>
+    <button class="btn small" id="ckRecBtn" onclick="recogTest()">🎤 말하기</button>
+    <div class="chkline" id="ckRecLog"></div>
+  </div>
+  <div class="card"><b>🌐 서버 속도</b>
+    <div class="row"><button class="btn small gray" onclick="serverSpeedTest()">재기</button><span id="ckSrv" class="muted"></span></div>
+  </div>
+  <button class="btn green" onclick="sendCheck()">📤 점검 결과 보내기</button>
+  <p class="muted" style="text-align:center">앱 v<span id="ckVer"></span></p>
+</div>
+
 <!-- 아래 탭 -->
 <div id="nav">
   <button data-t="tabStudy" onclick="showTab('tabStudy')"><b>📚</b>공부</button>
@@ -343,17 +393,33 @@ h2{font-size:18px;margin:16px 0 8px}
 </div>
 
 <div id="toast"></div>
+<div id="loader"><b>⏳ 불러오는 중…</b></div>
 <div class="modal" id="modal"><div class="mbox" id="mbox"></div></div>
 
 <script>
 /***************************************************************
  * 영공도전_jw 앱 화면
- * VERSION 2.0   [v2.0] 말해보카식 공부 + 사용자 등록 + 조각 그림판 + 관리자 모드
+ * VERSION 2.3   [v2.3] 🩺 점검 화면(마이크 게이지·인식 시험·목소리 고르기·서버 속도), 점검 기록 자동 전송,
+ *                      인식 중 글자 표시·오류 이름 표시, 비슷한 발음 '거의 맞음', 읽기 속도 1.0
+ *               [v2.2] 모르겠어요 버튼, 레벨테스트 바로 채점, 눌림·소리·진동, 자동 다크 끄기, 기다림 줄이기, 그림 힌트 빼기
+ *               [v2.1] 화면마다 탭 이름·아이콘 다르게 (아빠 화면 / 사용자 화면)
+ *               [v2.0] 말해보카식 공부 + 사용자 등록 + 조각 그림판 + 관리자 모드
  * 고친 곳은 [v버전] 표시로 Ctrl+F 찾기
  ***************************************************************/
 
 // ===================== 조절할 값 =====================
-const VERSION = '2.0';            // 앱 화면 버전
+const VERSION = '2.3';            // 앱 화면 버전
+const LOG_ON = true;              // [v2.3] 점검 기록(마이크·목소리·오류)을 서버 '점검기록' 시트로 보냄 (false면 끔)
+const LOG_SEND_SEC = 30;          // [v2.3] 점검 기록을 모아서 보내는 간격(초)
+const CLOSE_MATCH_ON = true;      // [v2.3] 비슷한 발음(한 글자 차이, 예: ant↔and)도 "거의 맞음"으로 통과
+const MIC_TEST_SEC = 5;           // [v2.3] 점검 화면 마이크 소리 크기 재는 시간(초)
+const SLOW_API_MS = 3000;         // [v2.3] 서버 대답이 이보다 늦으면 점검 기록에 남김
+const SOUND_ON = true;            // [v2.2] 맞음 딩동 / 틀림 삑 소리 (false면 끔)
+const VIBRATE_ON = true;          // [v2.2] 누를 때 진동 (갤럭시만, 아이폰은 웹에서 진동 안 됨)
+const TEST_NEXT_MS = 800;         // [v2.2] 레벨테스트에서 ⭕/❌ 보여 주고 다음 문제로 넘어가는 시간
+const LOADER_DELAY_MS = 150;      // [v2.2] 서버가 이 시간보다 늦으면 "불러오는 중" 표시
+const TITLE_DAD = '👨 영공도전 아빠';   // [v2.1] 아빠 화면 탭 이름
+const TITLE_KID = '🍎 영공도전';        // [v2.1] 사용자 화면 탭 이름 (뒤에 · 이름이 붙어요)
 const BEAT_SEC = 30;              // 서버에 "공부 중" 신호 보내는 간격(초)
 const ACTIVE_WINDOW_SEC = 45;     // 마지막으로 문제 푼 뒤 이 시간(초) 안이어야 공부 시간으로 인정
 const FLUSH_EVERY = 5;            // 공부 결과를 이 문제 수마다 서버에 저장
@@ -365,7 +431,7 @@ const LIVES = 3;                  // 사과 게임 목숨
 const FALL_START_SEC = 8;         // 사과가 땅까지 떨어지는 시간(초) — 처음
 const FALL_MIN_SEC = 4;           // 가장 빠를 때(초)
 const FALL_STEP_SEC = 0.3;        // 연속으로 맞힐 때마다 빨라지는 정도(초)
-const SPEECH_RATE = 0.85;         // 영어 읽어주는 속도 (1이 보통)
+const SPEECH_RATE = 1.0;          // [v2.3] 영어 읽어주는 기본 속도 (1이 보통, 점검 화면에서 바꿀 수 있음)
 const TEASER_MIN_SEC = 90;        // 이벤트 예약 중 티저 문구 간격 — 최소(초)
 const TEASER_MAX_SEC = 220;       // 티저 문구 간격 — 최대(초)
 const DAD_REFRESH_SEC = 15;       // 아빠 화면 자동 새로고침(초)
@@ -425,18 +491,54 @@ let SERVER = '', UID = '', ST = null, BANK = [], WMAP = {};
 let ADMIN_PIN = '', SHOWANS = false, AB_FOLD = false;
 let lastAnswerAt = 0, teaserTimer = null, giftShown = false, beatTimer = null;
 
+/* ---------- [v2.1] 탭 이름·아이콘 ---------- */
+function setTab(title, emoji){
+  document.title = title;
+  const ic = document.getElementById('favIcon');
+  if(ic) ic.href = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E" + emoji + "%3C/text%3E%3C/svg%3E";
+}
+
 /* ---------- 저장소 (사파리에서 막혀도 안 멈추게) ---------- */
 function sget(k){ try{ return localStorage.getItem(k) || ''; }catch(e){ return ''; } }
 function sset(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 
 /* ---------- 서버 요청 ---------- */
-async function api(action, data){
+let LOADING = 0;
+async function api(action, data, opt){
   const body = Object.assign({action}, data||{});
   if(UID && body.uid === undefined) body.uid = UID;
-  const r = await fetch(SERVER, {method:'POST', body: JSON.stringify(body)});   // text/plain으로 가서 추가 확인 요청 없이 바로 가요
-  const j = await r.json();
-  if(!j.ok) throw Object.assign(new Error(j.msg||'오류'), {res:j});
-  return j;
+  const quiet = opt && opt.quiet;   // [v2.2] 뒤에서 조용히 저장하는 건 "불러오는 중"을 안 띄워요
+  let t = null;
+  if(!quiet){ LOADING++; t = setTimeout(()=>{ if(LOADING) document.getElementById('loader').classList.add('on'); }, LOADER_DELAY_MS); }
+  try{
+    const t0 = Date.now();
+    const r = await fetch(SERVER, {method:'POST', body: JSON.stringify(body)});   // text/plain으로 가서 추가 확인 요청 없이 바로 가요
+    const j = await r.json();
+    const ms = Date.now() - t0;
+    if(ms > SLOW_API_MS && action !== 'devlog') dlog('slow', action+' '+ms+'ms');   // [v2.3]
+    if(!j.ok){ if(action !== 'devlog' && !(j.pinError)) dlog('api-error', action+': '+(j.msg||'')); throw Object.assign(new Error(j.msg||'오류'), {res:j}); }
+    return j;
+  } finally {
+    if(!quiet){ clearTimeout(t); LOADING = Math.max(0, LOADING-1); if(!LOADING) document.getElementById('loader').classList.remove('on'); }
+  }
+}
+
+/* [v2.2] 효과음·진동 */
+let AC = null;
+function sfx(kind){
+  if(VIBRATE_ON && navigator.vibrate){ try{ navigator.vibrate(kind==='bad' ? [60,40,60] : kind==='ok' ? 35 : 12); }catch(e){} }
+  if(!SOUND_ON) return;
+  try{
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    if(AC.state === 'suspended') AC.resume();
+    const notes = kind==='ok' ? [[880,0,.12],[1320,.1,.2]] : kind==='bad' ? [[180,0,.28]] : [[700,0,.05]];
+    notes.forEach(([f,t,d])=>{
+      const o = AC.createOscillator(), g = AC.createGain(), now = AC.currentTime;
+      o.type = kind==='bad' ? 'square' : 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, now+t); g.gain.exponentialRampToValueAtTime(kind==='bad'?0.12:0.25, now+t+0.01); g.gain.exponentialRampToValueAtTime(0.0001, now+t+d);
+      o.connect(g); g.connect(AC.destination); o.start(now+t); o.stop(now+t+d+0.03);
+    });
+  }catch(e){}
 }
 
 /* ---------- 화면 도우미 ---------- */
@@ -468,21 +570,27 @@ function confetti(){
 function fmtWait(m){ return m>=60 ? Math.ceil(m/60)+'시간' : m+'분'; }
 
 /* ---------- 영어 읽어주기 ---------- */
-let enVoice = null;
+let enVoice = null, voiceLogged = false;
+function enVoices(){ try{ return speechSynthesis.getVoices().filter(v=>/^en/i.test(v.lang)); }catch(e){ return []; } }
 function pickVoice(){
   try{
-    const vs = speechSynthesis.getVoices();
-    enVoice = vs.find(v=>v.lang==='en-US' && /Samantha|Google US/i.test(v.name)) || vs.find(v=>v.lang==='en-US') || vs.find(v=>/^en/.test(v.lang)) || null;
+    const vs = enVoices(), mine = sget('yg_voice');   // [v2.3] 점검 화면에서 고른 목소리가 먼저
+    enVoice = (mine && vs.find(v=>v.name===mine)) || vs.find(v=>/en.US/i.test(v.lang) && /Google/i.test(v.name)) || vs.find(v=>/en.US/i.test(v.lang) && /Samantha/i.test(v.name))
+      || vs.find(v=>/en.US/i.test(v.lang)) || vs[0] || null;
+    if(vs.length && !voiceLogged){ voiceLogged = true; dlog('tts-voices', {count: vs.length, pick: enVoice ? enVoice.name+' ('+enVoice.lang+')' : '없음', all: vs.map(v=>v.name).slice(0,12).join(', ')}); }
   }catch(e){}
 }
 try{ speechSynthesis.onvoiceschanged = pickVoice; pickVoice(); }catch(e){}
+function speechRate(){ const r = parseFloat(sget('yg_rate')); return r >= 0.5 && r <= 1.5 ? r : SPEECH_RATE; }
 function say(text){
   try{
+    if(!enVoice) pickVoice();
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'en-US'; u.rate = SPEECH_RATE; if(enVoice) u.voice = enVoice;
+    u.lang = 'en-US'; u.rate = speechRate(); if(enVoice) u.voice = enVoice;
+    u.onerror = (e)=>dlog('tts-error', (e && e.error) || '?');
     speechSynthesis.speak(u);
-  }catch(e){}
+  }catch(e){ dlog('tts-error', e.message); }
 }
 
 /* ---------- 마이크 ---------- */
@@ -490,25 +598,175 @@ const NUM = {'3':'three','5':'five','6':'six','10':'ten'};
 let REC = null, recOn = false;
 function recogOK(){ return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }
 function norm(s){ return String(s).toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(Boolean).map(x=>NUM[x]||x); }
+/* 한 글자 차이 (ant ↔ and) */
+function editDist(a, b){
+  const d = Array.from({length:a.length+1}, (_,i)=>[i].concat(Array(b.length).fill(0)));
+  for(let j=1;j<=b.length;j++) d[0][j] = j;
+  for(let i=1;i<=a.length;i++) for(let j=1;j<=b.length;j++) d[i][j] = Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+  return d[a.length][b.length];
+}
+/* [v2.3] 'exact' = 정확히 맞음, 'close' = 거의 맞음(한 글자 차이), '' = 틀림 */
 function heardMatch(heard, target){
   const tw = norm(target);
-  return heard.some(t=>{ const ws = norm(t); return tw.every(w=>ws.includes(w)) || ws.join('')===tw.join(''); });
+  if(heard.some(t=>{ const ws = norm(t); return tw.every(w=>ws.includes(w)) || ws.join('')===tw.join(''); })) return 'exact';
+  if(CLOSE_MATCH_ON && tw.length===1 && tw[0].length>=3){
+    const lim = tw[0].length>=7 ? 2 : 1;
+    if(heard.some(t=>norm(t).some(w=>editDist(w, tw[0])<=lim))) return 'close';
+  }
+  return '';
 }
-/* onDone(heardList) — 실패하면 빈 배열 */
-function listen(btn, onDone){
+const REC_ERR = { 'not-allowed':'마이크 허용 안 됨 (브라우저 설정에서 마이크 허용)', 'no-speech':'소리가 안 들어왔어요', 'network':'인터넷/구글 음성 서버 연결 안 됨',
+  'audio-capture':'마이크를 못 잡음 (다른 앱이 쓰는 중일 수 있음)', 'service-not-allowed':'이 브라우저에서 음성 인식 서비스가 막혀 있음', 'language-not-supported':'영어 인식이 지원 안 됨', 'aborted':'중간에 멈춤' };
+/* onDone(heardList, errCode) — 실패하면 빈 배열. onLive(글자) = 인식 중 실시간 글자 [v2.3] */
+function listen(btn, onDone, onLive){
   if(recOn){ stopMic(); return; }
   const R = window.SpeechRecognition || window.webkitSpeechRecognition;
   try{
-    REC = new R(); REC.lang = 'en-US'; REC.interimResults = false; REC.maxAlternatives = 5; REC.continuous = false;
-    let got = false;
-    REC.onresult = (ev)=>{ got = true; const h = []; for(const alt of ev.results[0]) h.push(alt.transcript); onDone(h); };
-    REC.onerror = (ev)=>{ if(ev.error==='not-allowed') toast('🎤 마이크 허용이 필요해요<br>(설정 → Safari → 마이크)'); else if(ev.error!=='aborted' && ev.error!=='no-speech') toast('🎤 인식 오류: '+ev.error); };
-    REC.onend = ()=>{ recOn=false; if(btn){ btn.classList.remove('listen'); btn.dataset.lab && (btn.innerHTML = btn.dataset.lab); } if(!got) onDone([]); };
+    REC = new R(); REC.lang = 'en-US'; REC.interimResults = true; REC.maxAlternatives = 5; REC.continuous = false;
+    let got = false, live = '', err = '';
+    const t0 = Date.now();
+    REC.onstart = ()=>dlog('mic-start', '');
+    REC.onaudiostart = ()=>dlog('mic-audio', '마이크 소리 받기 시작');
+    REC.onspeechstart = ()=>dlog('mic-speech', '말소리 감지');
+    REC.onresult = (ev)=>{
+      const res = ev.results[ev.results.length-1];
+      if(!res.isFinal && res.isFinal !== undefined){ live = res[0].transcript; if(onLive) onLive(live); return; }
+      if(got) return;
+      got = true; const h = []; for(const alt of res) h.push(alt.transcript);
+      if(live && h.indexOf(live)<0) h.push(live);
+      dlog('mic-result', {heard: h.join(' | '), ms: Date.now()-t0});
+      onDone(h, '');
+    };
+    REC.onerror = (ev)=>{ err = ev.error; dlog('mic-error', ev.error + (ev.message ? ' '+ev.message : ''));
+      if(ev.error==='not-allowed') toast('🎤 마이크 허용이 필요해요<br>(브라우저 설정 → 사이트 권한 → 마이크)'); };
+    REC.onend = ()=>{ recOn=false; if(btn){ btn.classList.remove('listen'); btn.dataset.lab && (btn.innerHTML = btn.dataset.lab); }
+      if(!got){ dlog('mic-end', {noResult:true, live, err, ms: Date.now()-t0}); onDone(live ? [live] : [], err); } };
     REC.start(); recOn = true;
     if(btn){ btn.dataset.lab = btn.innerHTML; btn.classList.add('listen'); btn.innerHTML = '🎙'; }
-  }catch(e){ toast('🎤 마이크를 켤 수 없어요'); }
+  }catch(e){ dlog('mic-error', 'start 실패: '+e.message); toast('🎤 마이크를 켤 수 없어요'); }
 }
 function stopMic(){ try{ if(REC && recOn) REC.abort(); }catch(e){} recOn=false; }
+
+/* =============================================================
+ *  [v2.3] 점검 기록 — 화면에서 생긴 일을 모아서 서버 '점검기록' 시트로 보냄
+ * ============================================================= */
+let LOGBUF = [];
+function dlog(ev, d){
+  if(!LOG_ON) return;
+  LOGBUF.push({t: new Date().toTimeString().slice(0,8), ev, d: typeof d === 'string' ? d : JSON.stringify(d==null?'':d)});
+  if(LOGBUF.length > 300) LOGBUF.splice(0, LOGBUF.length-300);
+  if(LOGBUF.length >= 40) flushLog();
+}
+function flushLog(keep){
+  if(!LOGBUF.length || !SERVER) return Promise.resolve();
+  const logs = LOGBUF.splice(0, 100);
+  try{
+    return fetch(SERVER, {method:'POST', keepalive: !!keep, body: JSON.stringify({action:'devlog', uid: UID||'', ua: navigator.userAgent, logs})}).catch(()=>{});
+  }catch(e){ return Promise.resolve(); }
+}
+setInterval(()=>flushLog(), LOG_SEND_SEC*1000);
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) flushLog(true); });
+window.addEventListener('error', (e)=>dlog('js-error', (e.message||'')+' @'+(e.lineno||'')));
+/* 폰이 앱을 억지로 어둡게 바꿨는지 (크롬 자동 다크 감지 방법) */
+function autoDarkOn(){
+  try{
+    const d = document.createElement('div');
+    d.style.cssText = 'display:none;background-color:canvas;color-scheme:light';
+    document.body.appendChild(d);
+    const bg = getComputedStyle(d).backgroundColor; d.remove();
+    return bg !== 'rgb(255, 255, 255)';
+  }catch(e){ return null; }
+}
+function devInfo(){
+  return { ua: navigator.userAgent.slice(0,160), autoDark: autoDarkOn(), osDark: !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches),
+    recog: recogOK(), tts: 'speechSynthesis' in window, voices: enVoices().length, app: VERSION };
+}
+
+/* ---------- 🩺 점검 화면 ---------- */
+let CHECK_BACK = null, micStream = null, micTimer = null;
+function openCheck(fromQuiz){
+  CHECK_BACK = document.querySelector('.scr.on') ? document.querySelector('.scr.on').id : 'main';
+  stopMic(); go('check');
+  document.getElementById('ckVer').textContent = VERSION; document.getElementById('ckSec').textContent = MIC_TEST_SEC;
+  const i = devInfo();
+  dlog('check-open', i);
+  const yes = (b)=> b===null ? '모름' : b ? '예' : '아니요';
+  document.getElementById('ckInfo').innerHTML = [
+    ['브라우저', /SamsungBrowser/.test(i.ua) ? '삼성 인터넷' : /CriOS|Chrome/.test(i.ua) ? '크롬' : /Safari/.test(i.ua) ? '사파리' : '기타'],
+    ['폰 다크 모드', yes(i.osDark)], ['브라우저가 앱을 억지로 어둡게', yes(i.autoDark)],
+    ['음성 인식 기능', i.recog ? '있음' : '없음 (말하기 문제는 듣고 고르기로 바뀜)'], ['영어 목소리 수', i.voices + '개']
+  ].map(([k,v])=>`<div class="kv"><span>${k}</span><b>${esc(v)}</b></div>`).join('');
+  fillVoices();
+  const r = speechRate(); document.getElementById('ckRate').value = r; document.getElementById('ckRateTxt').textContent = r.toFixed(2);
+  window.scrollTo(0,0);
+}
+function closeCheck(){ micLevelStop(); stopMic(); flushLog(); if(CHECK_BACK==='quiz' && Q) go('quiz'); else if(CHECK_BACK==='dad') go('dad'); else if(ST) enterMain(); else go('reg'); }
+function fillVoices(){
+  const vs = enVoices(), sel = document.getElementById('ckVoice');
+  if(!vs.length){ sel.innerHTML = '<option>영어 목소리가 없어요 (폰 설정 → 텍스트 음성 변환에서 영어 설치)</option>'; return; }
+  sel.innerHTML = vs.map(v=>`<option value="${esc(v.name)}" ${enVoice && enVoice.name===v.name ? 'selected' : ''}>${esc(v.name)} · ${esc(v.lang)}${v.localService ? '' : ' (인터넷)'}</option>`).join('');
+}
+function pickUserVoice(){ const n = document.getElementById('ckVoice').value; sset('yg_voice', n); pickVoice(); dlog('tts-pick', n); testSay('egg'); }
+function setRate(v){ sset('yg_rate', v); document.getElementById('ckRateTxt').textContent = Number(v).toFixed(2); }
+function testSay(t){ dlog('tts-test', {text: t, voice: enVoice ? enVoice.name : '없음', rate: speechRate()}); say(t); }
+async function micLevelTest(){
+  const btn = document.getElementById('ckMicBtn'), txt = document.getElementById('ckMicTxt'), bar = document.getElementById('ckMeter');
+  if(micStream){ micLevelStop(); return; }
+  try{
+    micStream = await navigator.mediaDevices.getUserMedia({audio:true});
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    if(AC.state === 'suspended') await AC.resume();
+    const src = AC.createMediaStreamSource(micStream), an = AC.createAnalyser();
+    an.fftSize = 1024; src.connect(an);
+    const buf = new Float32Array(an.fftSize); let max = 0, sum = 0, n = 0;
+    const t0 = Date.now(); btn.textContent = '멈춤';
+    micTimer = setInterval(()=>{
+      an.getFloatTimeDomainData(buf);
+      let rms = 0; for(const x of buf) rms += x*x; rms = Math.sqrt(rms/buf.length);
+      const pct = Math.min(100, Math.round(rms*400));
+      bar.style.width = pct+'%'; max = Math.max(max, pct); sum += pct; n++;
+      txt.textContent = '지금 '+pct+'% · 최대 '+max+'%';
+      if(Date.now()-t0 > MIC_TEST_SEC*1000){
+        micLevelStop();
+        const verdict = max < 5 ? '소리가 거의 안 들어와요 (마이크 막힘/권한 확인)' : max < 20 ? '소리가 작아요' : '마이크 정상';
+        txt.textContent = '최대 '+max+'% · 평균 '+Math.round(sum/Math.max(1,n))+'% → '+verdict;
+        dlog('mic-level', {max, avg: Math.round(sum/Math.max(1,n)), verdict});
+      }
+    }, 60);
+  }catch(e){ txt.textContent = '마이크를 못 켰어요: '+(e.name||e.message); dlog('mic-level-error', (e.name||'')+' '+(e.message||'')); micLevelStop(); }
+}
+function micLevelStop(){
+  clearInterval(micTimer); micTimer = null;
+  if(micStream){ micStream.getTracks().forEach(t=>t.stop()); micStream = null; }
+  const b = document.getElementById('ckMicBtn'); if(b) b.textContent = '시작';
+  const bar = document.getElementById('ckMeter'); if(bar) bar.style.width = '0';
+}
+function recogTest(){
+  micLevelStop();
+  const box = document.getElementById('ckHeard'), lg = document.getElementById('ckRecLog');
+  if(!recogOK()){ box.textContent = '이 브라우저는 음성 인식이 없어요'; dlog('recog-test', '기능 없음'); return; }
+  box.textContent = '듣는 중…'; const t0 = Date.now();
+  listen(document.getElementById('ckRecBtn'), (heard, err)=>{
+    const ms = Date.now()-t0;
+    if(!heard.length){ box.innerHTML = '<span style="color:var(--bad)">못 알아들음</span>'; lg.textContent = (err ? '오류: '+err+' — '+(REC_ERR[err]||'') : '결과 없이 끝남')+' · '+ms+'ms\n'+lg.textContent; return; }
+    const m = heardMatch(heard, 'apple');
+    box.innerHTML = esc(heard[0]) + (m==='exact' ? ' ⭕' : m==='close' ? ' 🔶 거의' : ' ❌');
+    lg.textContent = '들린 말 후보: '+heard.join(' / ')+' · '+ms+'ms\n'+lg.textContent;
+    dlog('recog-test', {heard: heard.join(' | '), match: m || 'no', ms});
+  }, (live)=>{ box.textContent = live + ' …'; });
+}
+async function serverSpeedTest(){
+  const el = document.getElementById('ckSrv'); el.textContent = '재는 중…';
+  const ts = [];
+  for(let k=0;k<3;k++){ const t0 = Date.now(); try{ await api('users', {uid:''}, {quiet:true}); ts.push(Date.now()-t0); }catch(e){ ts.push(-1); } }
+  el.textContent = ts.map(t=>t<0?'실패':(t/1000).toFixed(1)+'초').join(' / ');
+  dlog('server-speed', ts.join(','));
+}
+async function sendCheck(){
+  dlog('check-send', devInfo());
+  while(LOGBUF.length) await flushLog();
+  toast('📤 보냈어요. Claude가 점검기록을 볼 수 있어요');
+}
 
 /* =============================================================
  *  시작
@@ -535,6 +793,8 @@ async function boot(){
   try{
     const j = await api('init');
     ST = j; BANK = j.bank; WMAP = {};
+    setTab(TITLE_KID + ' · ' + ST.name, '🍎');   // [v2.1]
+    dlog('boot', devInfo());   // [v2.3]
     BANK.forEach(L=>L.stages.forEach(st=>st.words.forEach(w=>{ w.lv = L.lv; w.phonics = L.phonics; WMAP[w.id] = w; })));
     document.getElementById('verLine').textContent = '앱 v'+VERSION+' · 서버 v'+j.version;
     clearInterval(beatTimer); beatTimer = setInterval(beat, BEAT_SEC*1000);
@@ -555,9 +815,10 @@ function saveServer(){
 
 /* ---------- 사용자 등록 [v2.0] ---------- */
 async function showReg(){
+  setTab(TITLE_KID, '🍎');   // [v2.1]
   go('reg');
   try{
-    const j = await api('users', {uid:''});
+    const j = await api('users', {uid:''}, {quiet:true});
     if(j.users.length){
       document.getElementById('regList').style.display = '';
       document.getElementById('regUsers').innerHTML = j.users.map(u=>`<button class="btn gray small" onclick="useUser('${jsq(u.uid)}')">👤 ${esc(u.name)}</button>`).join('');
@@ -649,11 +910,15 @@ function openSettings(){
     <p class="muted">하루 공부량 (문제 수)</p>
     <div class="row" style="flex-wrap:wrap">${ST.goalChoices.map(g=>`<button class="btn small ${g===ST.goal?'':'gray'}" style="flex:0 0 30%" onclick="setGoal(${g})">${g}</button>`).join('')}</div>
     <button class="btn gray small" onclick="switchUser()">👥 다른 사람으로 바꾸기</button>
+    <button class="btn gray small" onclick="closeModal();openCheck()">🩺 점검 (소리·마이크 문제 찾기)</button>
     <button class="btn" onclick="closeModal()">닫기</button>
     <p class="muted">앱 v${VERSION}</p>`);
 }
-async function setGoal(g){
-  try{ ST = Object.assign(ST, await api('setGoal',{goal:g})); closeModal(); renderHome(); toast('하루 '+g+'문제로 바꿨어요'); }catch(e){ toast(e.message); }
+function setGoal(g){   // [v2.2] 누르는 즉시 바뀌고, 저장은 뒤에서
+  const old = ST.goal;
+  ST.goal = g; closeModal(); renderHome(); toast('하루 '+g+'문제로 바꿨어요');
+  api('setGoal',{goal:g},{quiet:true}).then(j=>{ ST = Object.assign(ST, j); if(document.getElementById('tabStudy').classList.contains('on')) renderHome(); })
+    .catch(e=>{ ST.goal = old; renderHome(); toast('저장 실패: '+e.message); });
 }
 
 /* =============================================================
@@ -668,7 +933,8 @@ async function startStudy(more){
   }catch(e){ toast(e.message); }
 }
 function startQuiz(mode, qs, extra){
-  Q = Object.assign({mode, qs, i:-1, results:[], answers:[], pending:[], pieces:[], right:0, timer:0, lock:false, flushing:Promise.resolve()}, extra||{});
+  Q = Object.assign({mode, qs, i:-1, results:[], answers:[], pending:[], pieces:[], right:0, tRight:0, tWrong:0, timer:0, lock:false, flushing:Promise.resolve()}, extra||{});
+  document.getElementById('qScore').innerHTML = mode==='test' ? '<span style="color:var(--ok)">⭕ 0</span> <span style="color:var(--bad)">❌ 0</span>' : '';   // [v2.2]
   document.getElementById('qTimerWrap').style.display = mode==='test' ? '' : 'none';
   go('quiz'); nextQ();
 }
@@ -698,27 +964,49 @@ function promptHTML(q, type){
   if(type==='sound') return `<div class="qkind">듣고 맞는 철자를 고르세요</div>${sayBtn}`;
   if(type==='pic') return `<div class="qkind">그림을 보고 맞는 철자를 고르세요</div><div class="qemo">${q.emo||'🍎'}</div><div class="muted">${esc(q.ko)}</div>${sayBtn}`;
   if(type==='blank') return `<div class="qkind">빈칸에 들어갈 단어는?</div><div class="qmid">${esc(q.text).replace('____','<span class="blank">____</span>')}</div><div class="muted">${esc(q.exKo)}</div>`;
-  if(type==='meaning') return `<div class="qkind">뜻이 뭘까요?</div>${q.emo?`<div class="qemo" style="font-size:48px">${q.emo}</div>`:''}${big(q.en)}${sayBtn}`;
+  if(type==='meaning') return `<div class="qkind">뜻이 뭘까요?</div>${big(q.en)}${sayBtn}`;   // [v2.2] 그림 힌트 뺌
   if(type==='listen') return `<div class="qkind">듣고 뜻을 고르세요</div>${sayBtn}`;
-  if(type==='ko2en') return `<div class="qkind">영어로 뭘까요?</div>${q.emo?`<div class="qemo" style="font-size:48px">${q.emo}</div>`:''}${big(q.ko)}`;
+  if(type==='ko2en') return `<div class="qkind">영어로 뭘까요?</div>${big(q.ko)}`;   // [v2.2] 그림 힌트 뺌
   return big(q.en);
 }
 function choiceHTML(q, type, showAns){
   return `<div class="qbox">${promptHTML(q, type)}</div><div class="opts">${q.choices.map((c,k)=>
-    `<button class="${showAns && k===q.answer?'hintAns':''}" onclick="choose(${k}, this)">${esc(c)}</button>`).join('')}</div><div id="fbArea"></div>`;
+    `<button class="${showAns && k===q.answer?'hintAns':''}" onclick="choose(${k}, this)">${esc(c)}</button>`).join('')}</div>
+    <button class="dunno" onclick="dunno()">🤷 모르겠어요</button><div id="fbArea"></div>`;   // [v2.2]
 }
 function choose(k, btn){
   if(!Q || Q.lock) return;
   const q = Q.qs[Q.i];
   lastAnswerAt = Date.now();
-  if(Q.mode !== 'study'){ Q.lock = true; Q.answers.push(k); btn.style.background = '#eef4ff'; setTimeout(nextQ, 180); return; }
   Q.lock = true;
+  if(Q.mode === 'diag'){ Q.answers.push(k); btn.classList.add('picked'); sfx('tap'); setTimeout(nextQ, 180); return; }
   const ok = k === q.answer;
-  const bs = document.querySelectorAll('.opts button');
-  bs[q.answer].classList.add('right');
-  if(!ok) btn.classList.add('wrong');
+  markChoice(q, k, ok);
+  if(Q.mode === 'test'){ Q.answers.push(k); testCount(ok); setTimeout(nextQ, TEST_NEXT_MS); return; }   // [v2.2] 테스트도 바로 ⭕/❌
   record(q, ok);
   feedback(q, ok);
+}
+/* [v2.2] 맞은 보기 초록 ⭕, 고른 틀린 보기 빨강 ❌ + 소리 */
+function markChoice(q, k, ok){
+  const bs = document.querySelectorAll('.opts button');
+  if(q.answer !== undefined && bs[q.answer]) bs[q.answer].classList.add('right');
+  if(!ok && k >= 0 && bs[k]) bs[k].classList.add('wrong');
+  sfx(ok ? 'ok' : 'bad');
+}
+function testCount(ok){
+  if(ok) Q.tRight++; else Q.tWrong++;
+  document.getElementById('qScore').innerHTML = `<span style="color:var(--ok)">⭕ ${Q.tRight}</span> <span style="color:var(--bad)">❌ ${Q.tWrong}</span>`;
+}
+/* [v2.2] 🤷 모르겠어요 = 틀린 걸로 침 */
+function dunno(){
+  if(!Q || Q.lock) return;
+  const q = Q.qs[Q.i];
+  Q.lock = true; lastAnswerAt = Date.now(); stopMic();
+  if(Q.mode === 'diag'){ Q.answers.push(-1); sfx('tap'); setTimeout(nextQ, 150); return; }
+  if(Q.mode === 'test'){ Q.answers.push(-1); markChoice(q, -1, false); testCount(false); setTimeout(nextQ, TEST_NEXT_MS); return; }
+  if(Q.type !== 'arrange' && Q.type !== 'speak') markChoice(q, -1, false); else sfx('bad');
+  record(q, false);
+  feedback(q, false, true);
 }
 /* 공부 결과 기록 + 피드백 */
 function record(q, ok, skip){
@@ -726,17 +1014,17 @@ function record(q, ok, skip){
   if(!skip && ok) Q.right++;
   if(Q.results.length - (Q.flushed||0) >= FLUSH_EVERY) flush();
 }
-function feedback(q, ok){
+function feedback(q, ok, dunnoFlag){
   const isG = q.type==='arrange';
   say(isG ? q.en : (q.type==='blank' && q.ex ? q.ex : q.en));
   const extra = isG ? `<div class="qmid" style="font-size:17px">${esc(q.en)}</div><div class="muted">${esc(q.note)}</div>`
-    : `<div><b style="font-size:18px">${esc(q.en)}</b> · ${esc(q.ko)}</div>${q.ex?`<div class="muted" style="margin-top:4px">${esc(q.ex)}<br>${esc(q.exKo)}</div>`:''}`;
+    : `<div>${q.emo?`<span style="font-size:26px">${q.emo}</span> `:''}<b style="font-size:18px">${esc(q.en)}</b> · ${esc(q.ko)}</div>${q.ex?`<div class="muted" style="margin-top:4px">${esc(q.ex)}<br>${esc(q.exKo)}</div>`:''}`;
   const fb = document.getElementById('fbArea');
   if(ok){
     fb.innerHTML = `<div class="fb good"><b style="color:var(--ok)">⭕ 정답!</b>${isG?extra:''}</div>`;
     setTimeout(nextQ, isG ? RIGHT_NEXT_MS+900 : RIGHT_NEXT_MS);
   } else {
-    fb.innerHTML = `<div class="fb bad"><b style="color:var(--bad)">❌ 아쉬워요</b> <span class="muted">오답노트에 넣었어요</span><div style="margin-top:6px">${extra}</div><button class="btn small" onclick="nextQ()">다음 ▶</button></div>`;
+    fb.innerHTML = `<div class="fb bad"><b style="color:var(--bad)">${dunnoFlag?'🤷 괜찮아요, 이렇게 외워요':'❌ 아쉬워요'}</b> <span class="muted">오답노트에 넣었어요</span><div style="margin-top:6px">${extra}</div><button class="btn small" onclick="nextQ()">다음 ▶</button></div>`;
   }
 }
 
@@ -745,12 +1033,13 @@ function arrangeHTML(q, showAns){
   return `<div class="qbox"><div class="qkind">영어 문장을 만들어 보세요</div><div class="qmid">${esc(q.ko)}</div>
     <div class="slot" id="slot"></div>${showAns?`<div class="muted" style="color:#b07a00">정답: ${esc(q.answer)}</div>`:''}</div>
     <div class="pool" id="pool">${q.tokens.map((t,k)=>`<button class="tok" data-k="${k}" onclick="placeTok(${k})">${esc(t)}</button>`).join('')}</div>
-    <div class="row"><button class="btn gray" onclick="clearTok()">다시</button><button class="btn" id="arrOk" onclick="checkArrange()" disabled>확인</button></div><div id="fbArea"></div>`;
+    <div class="row"><button class="btn gray" onclick="clearTok()">다시</button><button class="btn" id="arrOk" onclick="checkArrange()" disabled>확인</button></div>
+    <button class="dunno" onclick="dunno()">🤷 모르겠어요</button><div id="fbArea"></div>`;   // [v2.2]
 }
 function placeTok(k){
   if(Q.lock) return;
   const q = Q.qs[Q.i];
-  Q.placed.push(k);
+  Q.placed.push(k); sfx('tap');
   document.querySelector(`#pool .tok[data-k="${k}"]`).classList.add('used');
   drawSlot(q);
 }
@@ -770,6 +1059,7 @@ function checkArrange(){
   const q = Q.qs[Q.i];
   Q.lock = true; lastAnswerAt = Date.now();
   const ok = Q.placed.map(k=>q.tokens[k]).join(' ') === q.answer;
+  sfx(ok ? 'ok' : 'bad');   // [v2.2]
   record(q, ok); feedback(q, ok);
 }
 
@@ -779,21 +1069,28 @@ function speakHTML(q, showAns){
     <div class="qbig">${esc(q.en)}</div><div class="muted">${esc(q.ko)}</div>
     <button class="qsay" onclick="say('${jsq(q.say)}')">🔊 듣기</button></div>
     <div style="text-align:center"><button class="micbig" id="micBig" onclick="speakTap()">🎤</button><p class="muted" id="spkMsg">마이크를 누르고 말해요</p>
-    <button class="btn gray small" style="width:auto;display:inline-block;padding:8px 16px" onclick="speakSkip()">지금은 말하기 어려워요 (건너뛰기)</button></div><div id="fbArea"></div>`;
+    <button class="chip" style="margin-bottom:6px" onclick="openCheck(true)">🩺 마이크 점검</button><br>
+    <button class="btn gray small" style="width:auto;display:inline-block;padding:8px 16px" onclick="speakSkip()">지금은 말하기 어려워요 (건너뛰기)</button>
+    <button class="dunno" onclick="dunno()">🤷 모르겠어요</button></div><div id="fbArea"></div>`;   // [v2.2]
 }
 function speakTap(){
   if(!Q || Q.lock) return;
   const q = Q.qs[Q.i], idx = Q.i;
-  listen(document.getElementById('micBig'), (heard)=>{
+  document.getElementById('spkMsg').textContent = '듣는 중… 말해 보세요';
+  listen(document.getElementById('micBig'), (heard, err)=>{
     if(!Q || Q.i!==idx || Q.lock) return;
-    if(!heard.length){ document.getElementById('spkMsg').textContent = '잘 안 들렸어요. 다시 눌러 보세요'; return; }
+    if(!heard.length){ document.getElementById('spkMsg').innerHTML = '잘 안 들렸어요. 다시 눌러 보세요' + (err ? '<br><span style="color:var(--bad)">('+esc(REC_ERR[err]||err)+')</span>' : ''); return; }   // [v2.3] 오류 이름 표시
     lastAnswerAt = Date.now();
-    if(heardMatch(heard, q.en)){ Q.lock = true; record(q, true); feedback(q, true); return; }
+    const m = heardMatch(heard, q.en);
+    if(m){ Q.lock = true; sfx('ok'); record(q, true); feedback(q, true);
+      if(m==='close'){ const fb = document.querySelector('#fbArea .fb b'); if(fb) fb.innerHTML = '⭕ 거의 맞았어요! <span class="muted">(들린 말: '+esc(heard[0])+')</span>'; }   // [v2.3]
+      return; }
     Q.tries++;
     document.getElementById('spkMsg').innerHTML = '들린 말: <b>'+esc(heard[0])+'</b> — 다시 해 봐요';
     say(q.en);
-    if(Q.tries >= SPEAK_TRIES){ Q.lock = true; record(q, false); feedback(q, false); }
-  });
+    if(Q.tries >= SPEAK_TRIES){ Q.lock = true; sfx('bad'); record(q, false); feedback(q, false); }
+    else sfx('bad');
+  }, (live)=>{ const m = document.getElementById('spkMsg'); if(m && Q && Q.i===idx) m.innerHTML = '들리는 말: <b>'+esc(live)+'</b>'; });   // [v2.3] 인식 중 글자
 }
 function speakSkip(){ if(!Q || Q.lock) return; Q.lock = true; stopMic(); record(Q.qs[Q.i], false, true); nextQ(); }
 
@@ -803,7 +1100,7 @@ function startTimer(){
   Q.timer = setInterval(()=>{
     const left = 1 - (Date.now()-t0)/(sec*1000);
     bar.style.width = Math.max(0,left*100)+'%';
-    if(left<=0 && !Q.lock){ Q.lock = true; Q.answers.push(-1); nextQ(); }
+    if(left<=0 && !Q.lock){ Q.lock = true; Q.answers.push(-1); clearInterval(Q.timer); markChoice(Q.qs[Q.i], -1, false); testCount(false); setTimeout(nextQ, TEST_NEXT_MS); }   // [v2.2]
   }, 100);
 }
 
@@ -813,7 +1110,7 @@ function flush(){
   if(!part.length) return Q.flushing;
   Q.flushed = Q.results.length;
   const myQ = Q;
-  Q.flushing = Q.flushing.then(()=>api('studyResult', {results: part}).then(j=>{
+  Q.flushing = Q.flushing.then(()=>api('studyResult', {results: part}, {quiet:true}).then(j=>{
     ST = Object.assign(ST, j);
     (j.newPieces||[]).forEach(p=>myQ.pieces.push(p));
     if(j.goalHit) myQ.goalHit = true;
@@ -920,7 +1217,7 @@ async function renderWords(){
   const box = document.getElementById('wordList');
   box.innerHTML = '<p class="muted">불러오는 중...</p>';
   try{
-    const j = await api('words', WTAB===0 ? {wrongOnly:true} : {level:WTAB});
+    const j = await api('words', WTAB===0 ? {wrongOnly:true} : {level:WTAB}, {quiet:true});
     if(!j.words.length){ box.innerHTML = '<p class="muted">'+(WTAB===0?'틀린 단어가 없어요. 대단해요! 👍':'단어가 없어요')+'</p>'; return; }
     box.innerHTML = j.words.map(w=>{
       const st = w.box<0 ? '⬜' : w.box>=3 ? '✅' : '🟨';
@@ -929,13 +1226,12 @@ async function renderWords(){
     }).join('') + '<p class="muted">⬜ 새 단어 · 🟨 학습 중 · ✅ 외움</p>';
   }catch(e){ box.innerHTML = '<p class="muted">'+esc(e.message)+'</p>'; }
 }
-async function starWord(id, on){
-  try{
-    await api('star', {id, on: !!on});
-    const b = document.getElementById('st_'+id.replace(/\W/g,'_'));
-    if(b){ b.textContent = on?'⭐':'☆'; b.setAttribute('onclick', `starWord('${jsq(id)}', ${on?0:1})`); }
-    toast(on ? '⭐ 다음 학습에 먼저 나와요' : '학습 추가를 뺐어요');
-  }catch(e){ toast(e.message); }
+function starWord(id, on){   // [v2.2] 누르는 즉시 바뀌고, 저장은 뒤에서
+  const b = document.getElementById('st_'+id.replace(/\W/g,'_'));
+  const set = (v)=>{ if(b){ b.textContent = v?'⭐':'☆'; b.setAttribute('onclick', `starWord('${jsq(id)}', ${v?0:1})`); } };
+  set(on); sfx('tap');
+  toast(on ? '⭐ 다음 학습에 먼저 나와요' : '학습 추가를 뺐어요');
+  api('star', {id, on: !!on}, {quiet:true}).catch(e=>{ set(!on); toast('저장 실패: '+e.message); });
 }
 
 /* =============================================================
@@ -947,7 +1243,7 @@ async function renderBox(){
   const box = document.getElementById('prizeList');
   box.innerHTML = '<p class="muted">불러오는 중...</p>';
   try{
-    const j = await api('prizes');
+    const j = await api('prizes', {}, {quiet:true});
     box.innerHTML = j.prizes.length ? j.prizes.map(p=>
       `<div class="prize ${p.status==='지급 완료'?'paid':''}"><div class="p">🎁 ${esc(p.prize)}</div><b>${esc(p.kind)}</b> · ${esc(THEME_NAME[p.theme]||'')}<br><span class="muted">${esc(p.date)} · ${p.status==='지급 완료'?'✅ 받았어요 ('+esc(p.paid)+')':'⏳ 아빠가 줄 차례예요'}</span></div>`).join('')
       : '<p class="muted">아직 없어요. 그림판을 완성해 보세요!</p>';
@@ -961,7 +1257,7 @@ async function beat(){
   if(document.hidden || !ST || !UID) return;
   const active = Date.now() - lastAnswerAt < ACTIVE_WINDOW_SEC*1000;
   try{
-    const j = await api('beat', {active});
+    const j = await api('beat', {active}, {quiet:true});
     ST.todaySec = j.todaySec; ST.reward = j.reward;
     afterReward(j.reward);
   }catch(e){}
@@ -1132,6 +1428,7 @@ async function adminResetGo(){
  * ============================================================= */
 let DAD_PIN = '', dadTimer = null, DAD_UID = '', DAD = null;
 function openDad(){
+  setTab(TITLE_DAD, '👨');   // [v2.1]
   go('dad');
   document.getElementById('dadVer').textContent = 'v'+VERSION;
   const p = sget('yg_pin'); if(p){ document.getElementById('pinIn').value = p; dadLogin(); }
@@ -1155,7 +1452,7 @@ async function dadCall(action, data){
   try{ const j = await api(action, Object.assign({pin:DAD_PIN, uid:DAD_UID}, data||{})); renderDad(j); return j; }
   catch(e){ toast(e.message); }
 }
-async function dadRefresh(){ if(document.hidden || modalOpen()) return; try{ renderDad(await api('dad', {pin:DAD_PIN, uid:DAD_UID})); }catch(e){} }
+async function dadRefresh(){ if(document.hidden || modalOpen()) return; try{ renderDad(await api('dad', {pin:DAD_PIN, uid:DAD_UID}, {quiet:true})); }catch(e){} }
 function dadPick(uid){ DAD_UID = uid; sset('yg_dad_uid', uid); dadCall('dad'); }
 function renderDad(j){
   DAD = j;
