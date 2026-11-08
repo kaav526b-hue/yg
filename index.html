@@ -443,7 +443,8 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
 <script>
 /***************************************************************
  * 영공도전_jw 앱 화면
- * VERSION 2.7   [v2.7] 단계 달성률 %(막대·실시간 ▲▼·끝나고 변화), 단계 통과 시험, 예문 문장 배열(영어 배열·한글 배열 조사 자동·가짜 조각),
+ * VERSION 2.8   [v2.8] 내 단어장 🔍 찾기: 한글로 넣어도 영어로 찾아 채워요
+ *               [v2.7] 단계 달성률 %(막대·실시간 ▲▼·끝나고 변화), 단계 통과 시험, 예문 문장 배열(영어 배열·한글 배열 조사 자동·가짜 조각),
  *                      📌 내 단어장(직접 추가·🔍 인터넷 찾기·앱 단어 담기·복습·게임), 삼성 인터넷 다크 모드 대응
  *               [v2.6] 발음 기호(🔊 누르면 단어 아래, 정답 화면, 단어장), 🔁 단어·문장 다시 듣기, 점검 📖 긴 문장 읽기,
  *                      📚 부록 탭(파닉스 소리표 · 발음 기호표 · 🎤 따라 말하기)
@@ -459,7 +460,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
  ***************************************************************/
 
 // ===================== 조절할 값 =====================
-const VERSION = '2.7';            // 앱 화면 버전
+const VERSION = '2.8';            // 앱 화면 버전
 const PCT_TOAST_MS = 1600;        // [v2.7] 답할 때 달성률 ▲▼ 보여 주는 시간(ms)
 const LONG_TEXT = 'Good morning, everyone. My name is Jiwoo, and I am learning English every day. After school, I like to read books and play soccer with my friends.';   // [v2.6] 점검 화면 긴 문장 (속도 확인용)
 const LOG_ON = true;              // [v2.3] 점검 기록(마이크·목소리·오류)을 서버 '점검기록' 시트로 보냄 (false면 끔)
@@ -1566,7 +1567,7 @@ let MY_EDIT = null;
 function myFormHTML(w){
   w = w || {};
   return `<div class="myform"><b>${MY_EDIT?'✏️ 고치기':'✏️ 직접 추가'}</b>
-    <div class="row" style="margin-top:6px"><input id="myEn" placeholder="영어 (예: voltage)" value="${esc(w.en||'')}"><button class="btn small blue" style="flex:0 0 86px;margin:0" onclick="myLookup()">🔍 찾기</button></div>
+    <div class="row" style="margin-top:6px"><input id="myEn" placeholder="영어 또는 한글 (예: voltage, 변압기)" value="${esc(w.en||'')}"><button class="btn small blue" style="flex:0 0 86px;margin:0" onclick="myLookup()">🔍 찾기</button></div>
     <input id="myKo" placeholder="뜻 (예: 전압)" value="${esc(w.ko||'')}">
     <input id="myIpa" placeholder="발음 기호 (안 써도 돼요)" value="${esc(w.ipa||'')}">
     <input id="myEx" placeholder="예문 (안 써도 돼요)" value="${esc(w.ex||'')}">
@@ -1602,8 +1603,9 @@ async function myLookup(){
   try{
     const j = await api('myLookup', {en});
     const set = (id, v)=>{ const el = document.getElementById(id); if(v && !el.value.trim()) el.value = v; };
+    if(j.fromKo){ document.getElementById('myEn').value = j.en; document.getElementById('myKo').value = j.fromKo; }   // [v2.8] 한글 → 영어
     set('myKo', j.ko); set('myIpa', j.ipa); set('myEx', j.ex); set('myExKo', j.exKo);
-    msg.textContent = (j.found ? '✅ 찾았어요. ' : '⚠️ 사전에는 없어서 뜻만 번역했어요. ') + (j.ex ? '' : '예문은 사전에 없어요. ') + '맞게 고친 다음 💾 저장하세요.' + (j.err ? ' ('+j.err+')' : '');
+    msg.textContent = (j.fromKo ? '🔁 "'+j.fromKo+'" → '+j.en+' (번역). ' : '') + (j.found ? '✅ 찾았어요. ' : '⚠️ 사전에는 없어서 뜻만 번역했어요. ') + (j.ex ? '' : '예문은 사전에 없어요. ') + '맞게 고친 다음 💾 저장하세요.' + (j.err ? ' ('+j.err+')' : '');
   }catch(e){ msg.textContent = '못 찾았어요: ' + e.message; }
 }
 async function mySave(){
