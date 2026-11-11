@@ -450,6 +450,8 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
 <script>
 /***************************************************************
  * 영공도전_jw 앱 화면
+ * VERSION 4.0   [v4.0] 레벨 3 이상(토익·회화 포함) 문장 배열은 힌트 없음: 조각 하나만 놓아도 확인, '필요 없는 조각 (n개만 써요)' 안내 없음 (레벨 1·2는 그대로)
+ *                      🧪 시험 사람은 문제마다 '✅ 통과'(맞힌 걸로 처리) — 학습·단계 시험·레벨 테스트·진단
  * VERSION 3.9   [v3.9] 🔧 점검 모드 없앰(진짜 사람 진도를 바꾸던 것) → 관리자창 '🧪 시험해 보기': 시험 사람으로 들어가 점검 막대로 끝까지 시험, '시험 끝'이면 원래 사람으로.
  *                      예전 점검 모드가 켜진 폰은 저절로 꺼짐, 사용자 화면 '다른 사람으로 바꾸기' 없앰 — 서버 v3.5와 짝
  * VERSION 3.8   [v3.8] 관리자창에 사용자 화면과 같은 그림판: 📊 전체 진도 아래 지금 레벨 그림판(조각 n / 6), '그림판 상품 정하기' 레벨마다 작은 그림판
@@ -479,7 +481,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
  ***************************************************************/
 
 // ===================== 조절할 값 =====================
-const VERSION = '3.9';            // 앱 화면 버전 [v3.9]
+const VERSION = '4.0';            // 앱 화면 버전 [v4.0]
 const PCT_TOAST_MS = 1600;        // [v2.7] 답할 때 달성률 ▲▼ 보여 주는 시간(ms)
 const LONG_TEXT = 'Good morning, everyone. My name is Jiwoo, and I am learning English every day. After school, I like to read books and play soccer with my friends.';   // [v2.6] 점검 화면 긴 문장 (속도 확인용)
 const LOG_ON = true;              // [v2.3] 점검 기록(마이크·목소리·오류)을 서버 '점검기록' 시트로 보냄 (false면 끔)
@@ -512,7 +514,8 @@ const SPEED_DEFAULT = 2;           // [v2.5] 처음 속도 단계 (2 = 보통)
 const GAME_WRONG_WEIGHT = 2;       // [v2.5] 오늘 틀린 단어가 게임에 나오는 배수 (2 = 두 배 자주)
 const TEASER_MIN_SEC = 90;        // 이벤트 예약 중 티저 문구 간격 — 최소(초)
 const TEASER_MAX_SEC = 220;       // 티저 문구 간격 — 최대(초)
-const TEST_UID = 'utest';         // [v3.9] 🧪 시험 사람 번호 — 바꾸지 마세요 (서버 TEST_UID와 같아야 해요)
+const ARR_STRICT_FROM_LV = 3;     // [v4.0] 이 레벨부터(토익 6~8·회화 9~11 포함) 문장 배열 힌트 없음: 하나만 놓아도 확인, '필요 없는 조각' 안내 없음
+const TEST_UID = 'utest';      // [v3.9] 🧪 시험 사람 번호 — 바꾸지 마세요 (서버 TEST_UID와 같아야 해요)
 const DAD_BOARD_SMALL_PX = 220; // [v3.8] 관리자창 '그림판 상품 정하기' 칸의 레벨별 작은 그림판 너비(px)
 const DAD_REFRESH_SEC = 15;      // ([v3.7]부터 안 씀) 관리자창 자동 새로고침 — 이제 들어올 때만 새로 받아요
 const TEASERS = [                 // 이벤트 예약 중에 랜덤으로 뜨는 문구
@@ -1199,6 +1202,7 @@ function nextQ(){
   if(type==='arrange' || type==='sent_en' || type==='sent_ko') h = arrangeHTML(q, showAns);   // [v2.7]
   else if(type==='speak') h = speakHTML(q, showAns);
   else h = choiceHTML(q, type, showAns);
+  if(TESTING) h += `<button class="btn small green" style="margin-top:8px" onclick="passQ()">✅ 통과 (시험 사람만 · 맞힌 걸로)</button>`;   // [v4.0]
   document.getElementById('qArea').innerHTML = h;
   if(type==='arrange' || type==='sent_en' || type==='sent_ko') Q.placed = [];
   if(['sound','pic','listen'].includes(type) || (type==='meaning')) setTimeout(()=>say(q.say), 250);
@@ -1250,6 +1254,22 @@ function markChoice(q, k, ok){
 function testCount(ok){
   if(ok) Q.tRight++; else Q.tWrong++;
   document.getElementById('qScore').innerHTML = `<span style="color:var(--ok)">⭕ ${Q.tRight}</span> <span style="color:var(--bad)">❌ ${Q.tWrong}</span>`;
+}
+/* [v4.0] 🧪 시험 사람: ✅ 통과 = 정답을 맞힌 것과 똑같이 처리 */
+function passQ(){
+  if(!Q || Q.lock || !TESTING) return;
+  const q = Q.qs[Q.i];
+  const isArr = ['arrange','sent_en','sent_ko'].includes(Q.type), isSpk = Q.type === 'speak';
+  stopMic(); lastAnswerAt = Date.now();
+  if(q.answer === undefined && !isSpk){ toast('이 문제는 정답 정보가 없어서 통과를 못 해요'); return; }
+  Q.lock = true;
+  if(Q.mode === 'diag'){ Q.answers.push(q.answer); sfx('tap'); setTimeout(nextQ, 150); return; }
+  if(Q.mode === 'test' || Q.mode === 'stest'){
+    Q.answers.push(q.answer);
+    if(isArr) showArrAnswer(q, true); else markChoice(q, q.answer, true);
+    testCount(true); afterAns(isArr ? 900 : 0); return; }
+  if(!isArr && !isSpk) markChoice(q, q.answer, true); else sfx('ok');
+  record(q, true); feedback(q, true);
 }
 /* [v2.2] 🤷 모르겠어요 = 틀린 걸로 침 */
 function dunno(){
@@ -1343,7 +1363,7 @@ function arrangeHTML(q, showAns){
       <div class="qmid">${esc(q.prompt)}</div>${ko?`<button class="qsay" onclick="say('${jsq(q.prompt)}')">🔊</button>`:''}
       <div class="slot" id="slot"></div>${ko?'<div class="kopre" id="koPre"></div>':''}
       ${showAns?`<div class="muted" style="color:#b07a00">정답: ${esc(ko ? q.answer.split('|').join(' ') : q.answer)}</div>`:''}
-      ${q.tokens.length > q.need ? `<p class="muted">⚠️ 필요 없는 조각도 섞여 있어요 (${q.need}개만 써요)</p>` : ''}</div>
+      ${q.tokens.length > q.need && !strictQ(q) ? `<p class="muted">⚠️ 필요 없는 조각도 섞여 있어요 (${q.need}개만 써요)</p>` : ''}</div><!-- [v4.0] 레벨 3 이상은 안내 없음 -->
       <div class="pool" id="pool">${q.tokens.map((t,k)=>`<button class="tok" data-k="${k}" onclick="placeTok(${k})">${esc(t)}</button>`).join('')}</div>
       <div class="row"><button class="btn gray" onclick="clearTok()">다시</button><button class="btn" id="arrOk" onclick="checkArrange()" disabled>확인</button></div>
       <button class="dunno" onclick="dunno()">🤷 모르겠어요</button><div id="fbArea"></div>`;
@@ -1373,7 +1393,12 @@ function drawSlot(q){
   document.getElementById('slot').innerHTML = Q.placed.map((k,p)=>{ const w = q.tokens[k]; const j = ko ? josa(w, q.parts[p]) : '';
     return `<button class="tok" onclick="unplace(${p})">${esc(w)}${j?`<span class="jo">${esc(j)}</span>`:''}</button>`; }).join('');
   if(ko){ const pre = document.getElementById('koPre'); if(pre) pre.textContent = Q.placed.map((k,p)=>q.tokens[k]+josa(q.tokens[k], q.parts[p])).join(' '); }
-  document.getElementById('arrOk').disabled = Q.placed.length !== (q.need || q.tokens.length);
+  document.getElementById('arrOk').disabled = strictQ(q) ? !Q.placed.length : Q.placed.length !== (q.need || q.tokens.length);   // [v4.0] 레벨 3 이상은 하나만 놓아도 확인 (개수 힌트 없음)
+}
+/* [v4.0] 레벨 3 이상(토익·회화 포함)이면 문장 배열 힌트 없음 */
+function strictQ(q){
+  const lv = typeof q.lv === 'number' ? q.lv : (Q && Q.level) || (ST && ST.level) || 1;
+  return lv >= ARR_STRICT_FROM_LV;
 }
 /* 단계 시험에서 배열 정답 보여 주기 */
 function showArrAnswer(q, ok){
