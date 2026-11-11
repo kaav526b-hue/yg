@@ -450,6 +450,8 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
 <script>
 /***************************************************************
  * 영공도전_jw 앱 화면
+ * VERSION 4.3   [v4.3] 시험 하루 2번: 떨어지면 '❌ 틀린 단어만 공부하기' + 안내(100%로 채우면 오늘 한 번 더 / 내일 다시), 레벨 테스트 24시간 대기 → 내일,
+ *                      단계 기회를 다 쓰면 '⏰ 내일 다시 도전' — 서버 v3.6(한 단계 집중)과 짝
  * VERSION 4.2   [v4.2] 파닉스 철자 보기 오답(bet 등 가짜 철자)도 설명: 다른 글자와 그 모음 소리('애' [æ] 등) + 🔊 내 답·정답 비교 듣기
  * VERSION 4.1   [v4.1] 오답이면 '🙋 내가 고른 ○○ → 원래 말 🔊 + 💡 이럴 때 써요(회화)·예문(단어)', 정답 설명에도 💡 이럴 때 써요(회화)
  * VERSION 4.0   [v4.0] 레벨 3 이상(토익·회화 포함) 문장 배열은 힌트 없음: 조각 하나만 놓아도 확인, '필요 없는 조각 (n개만 써요)' 안내 없음 (레벨 1·2는 그대로)
@@ -483,7 +485,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
  ***************************************************************/
 
 // ===================== 조절할 값 =====================
-const VERSION = '4.2';            // 앱 화면 버전 [v4.2]
+const VERSION = '4.3';            // 앱 화면 버전 [v4.3]
 const PCT_TOAST_MS = 1600;        // [v2.7] 답할 때 달성률 ▲▼ 보여 주는 시간(ms)
 const LONG_TEXT = 'Good morning, everyone. My name is Jiwoo, and I am learning English every day. After school, I like to read books and play soccer with my friends.';   // [v2.6] 점검 화면 긴 문장 (속도 확인용)
 const LOG_ON = true;              // [v2.3] 점검 기록(마이크·목소리·오류)을 서버 '점검기록' 시트로 보냄 (false면 끔)
@@ -1124,6 +1126,7 @@ function renderHome(){
     const pct = s.pct || 0;
     const right = s.open ? '<span style="color:var(--ok);font-weight:700">✅ 통과</span>'
       : s.ready ? `<button class="stbtn" onclick="confirmStageTest(${L.lv},${i})">📝 단계 시험</button>`
+      : (pct >= 100 && s.left === 0) ? '<span class="muted">⏰ 내일 다시 도전</span>'   // [v4.3]
       : `<span class="muted">외움 ${s.learned}/${s.total}</span>`;
     return `<div class="stg"><span>${s.open?'✅':'🧩'} ${i+1}. ${esc(s.name)}</span>${right}
       <div class="pbar"><div class="bar"><i style="width:${s.open?100:pct}%"></i></div><b>${s.open?100:pct}%</b></div></div>`;
@@ -1131,7 +1134,8 @@ function renderHome(){
   let t = '';
   if(L.passed) t = '<p class="muted">레벨테스트 통과 완료!</p>';
   else if(!L.board.done) t = `<button class="btn gray small" disabled>📝 레벨테스트 (그림판 조각을 다 열면 열려요)</button>`;
-  else if(L.waitMin) t = `<button class="btn gray small" disabled>📝 레벨테스트 · ${fmtWait(L.waitMin)} 뒤 다시 도전</button>`;
+  else if(L.waitMin) t = `<button class="btn gray small" disabled>📝 레벨테스트 · 오늘 기회를 다 썼어요. 내일 다시 도전</button>`;   // [v4.3]
+  else if(L.refill != null && L.refill < 100) t = `<button class="btn small" onclick="wrongStudy(ST.levels[${L.lv-1}].refillIds)">❌ 틀린 단어 ${L.refillN}개 공부하기 (지금 ${L.refill}%) → 100%면 다시 도전</button>`;   // [v4.3]
   else t = `<button class="btn small" onclick="confirmTest(${L.lv})">📝 ${LV(L.lv)} 테스트 도전! (통과하면 다음 레벨)</button>`;
   document.getElementById('testArea').innerHTML = t;
   document.getElementById('levelList').innerHTML = `<p class="muted" style="margin:4px 0">공부 모드: <b>${esc((ST.modes||{})[ST.mode]||'')}</b> <button class="chip" onclick="openSettings()">바꾸기</button></p>` + myLevels(ST.levels).map(l=>   // [v2.4]
@@ -1760,9 +1764,10 @@ async function finishQuiz(quit){
       const wrong = r.review.filter(x=>!x.ok).map(x=>x.word);
       if(r.pass) confetti();
       modal(`<div style="font-size:60px">${r.pass?'🧩':'💪'}</div><h2>${esc(r.stageName)} ${r.score}점 ${r.pass?'통과!':'아쉬워요'}</h2>
-        <p class="muted">${r.pass?'조각이 열려요!':r.passScore+'점 넘으면 통과! 틀린 단어는 달성률이 내려가요. 다시 100%를 만들면 재도전!'}</p>
+        <p class="muted">${r.pass?'조각이 열려요!':retryMsg(r)}</p>
         ${wrong.length?`<p class="muted">틀린 문제: ${esc(wrong.join(', '))}</p>`:''}
-        <button class="btn" onclick="closeModal();showPieces(PENDING_PIECES);PENDING_PIECES=[]">확인</button>`);
+        ${!r.pass && (r.wrongIds||[]).length?`<button class="btn green" onclick="closeModal();wrongStudy(${esc(JSON.stringify(r.wrongIds))})">❌ 틀린 단어만 공부하기</button>`:''}
+        <button class="btn${!r.pass?' gray':''}" onclick="closeModal();showPieces(PENDING_PIECES);PENDING_PIECES=[]">확인</button>`);   // [v4.3]
       PENDING_PIECES = j.newPieces || [];
     }catch(e){ toast(e.message); enterMain(); }
     return;
@@ -1787,11 +1792,26 @@ async function finishQuiz(quit){
       if(r.pass) confetti();
       const wrong = r.review.filter(x=>!x.ok).map(x=>x.word);
       modal(`<div style="font-size:60px">${r.pass?'🏆':'💪'}</div><h2>${r.score}점 ${r.pass?'통과!':'아쉬워요'}</h2>
-        ${r.pass?`<p>${r.next?'<b>'+esc(r.next)+'</b>과 새 그림판이 열렸어요!':'🎓 이 코스 마지막 레벨까지 통과했어요!'}</p>`:`<p class="muted">${r.late?'시간이 초과됐어요. ':''}${ST.rules.passScore}점 넘으면 통과! ${r.retryHours}시간 뒤 다시 도전해요.</p>`}
+        ${r.pass?`<p>${r.next?'<b>'+esc(r.next)+'</b>과 새 그림판이 열렸어요!':'🎓 이 코스 마지막 레벨까지 통과했어요!'}</p>`:`<p class="muted">${r.late?'시간이 초과됐어요. ':''}${ST.rules.passScore}점 넘으면 통과! ${retryMsg(r)}</p>`}
         ${wrong.length?`<p class="muted">틀린 단어: ${esc(wrong.join(', '))}</p>`:''}
-        <button class="btn" onclick="closeModal()">확인</button>`);
+        ${!r.pass && (r.wrongIds||[]).length?`<button class="btn green" onclick="closeModal();wrongStudy(${esc(JSON.stringify(r.wrongIds))})">❌ 틀린 단어만 공부하기</button>`:''}
+        <button class="btn${!r.pass?' gray':''}" onclick="closeModal()">확인</button>`);   // [v4.3]
     }catch(e){ toast(e.message); enterMain(); }
   }
+}
+/* [v4.3] 시험에 떨어졌을 때 안내 + 틀린 단어만 공부 */
+function retryMsg(r){
+  const p = r.pct != null ? r.pct : 0;
+  return r.left > 0
+    ? `틀린 단어 때문에 ${p}%로 내려갔어요. <b>100%로 채우면 오늘 한 번 더</b> 도전할 수 있어요.`
+    : `오늘 기회를 다 썼어요. <b>${p}%를 100%로 채워 두고 내일 다시</b> 도전해요.`;
+}
+async function wrongStudy(ids){
+  try{
+    const j = await api('wrongStudy', {ids: ids || []});
+    if(!j.questions || !j.questions.length){ toast(j.msg || '다시 외울 단어가 없어요'); return; }
+    startQuiz('study', j.questions);
+  }catch(e){ toast(e.message); }
 }
 let PENDING_PIECES = [];
 function afterStudyModal(){ closeModal(); showPieces(PENDING_PIECES); PENDING_PIECES = []; }
@@ -1832,7 +1852,7 @@ async function startStageTest(lv, si){
 
 /* ---------- 레벨테스트 ---------- */
 function confirmTest(lv){
-  modal(`<div style="font-size:54px">📝</div><h2>${LV(lv)} 테스트</h2><p>${ST.rules.testCount}문제 · 문제당 ${ST.rules.testSec}초<br><b>${ST.rules.passScore}점 이상</b>이면 통과 → 다음 레벨!</p><p class="muted">시작하면 중간에 그만둘 수 없어요. 떨어지면 ${ST.rules.retryHours}시간 뒤에 다시 볼 수 있어요.</p>
+  modal(`<div style="font-size:54px">📝</div><h2>${LV(lv)} 테스트</h2><p>${ST.rules.testCount}문제 · 문제당 ${ST.rules.testSec}초<br><b>${ST.rules.passScore}점 이상</b>이면 통과 → 다음 레벨!</p><p class="muted">시작하면 중간에 그만둘 수 없어요. 떨어지면 틀린 단어를 100%로 채워서 오늘 한 번 더, 또 떨어지면 내일 다시 도전해요.</p>
   <div class="row"><button class="btn gray" onclick="closeModal()">나중에</button><button class="btn" onclick="closeModal();startTest(${lv})">시작!</button></div>`);
 }
 async function startTest(lv){
