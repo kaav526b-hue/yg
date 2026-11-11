@@ -443,6 +443,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
 <script>
 /***************************************************************
  * 영공도전_jw 앱 화면
+ * VERSION 3.5   [v3.5] 관리자창 날짜별이 빠르게: 처음 열 때 최근 7일 한 번에 받기, 지난 날은 폰에 저장, 먼 날은 앞뒤 하루 같이 — 서버 v3.3과 짝
  * VERSION 3.4   [v3.4] '아빠 화면' → '🔧 관리자창', '관리자 모드' → '🔧 점검 모드', 날짜 줄에 그날 알림(텔레그램과 같은 글)·📅 그날 진도, 진도 칸은 📊 전체 진도, 기록 전 날은 ✅/공부함 — 서버 v3.1과 짝
  * VERSION 3.3   [v3.3] 들어가기는 아빠가 등록한 이름으로만(다른 사람 바꾸기·사람 목록은 관리자만), 아빠 화면 ↕ 순서·➕ 새 사람, 날짜별 기록 한 줄(◀ ▶ 📅 달력) — 서버 v3.0과 짝
  * VERSION 3.2  [v3.2] 아빠 화면: 진도 🟨학습 중·✅외움 두 색, '어제 ○/목표', 📅 날짜별 기록(누르면 그날 단어) — 서버 v2.9와 짝
@@ -466,7 +467,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
  ***************************************************************/
 
 // ===================== 조절할 값 =====================
-const VERSION = '3.4';            // 앱 화면 버전 [v3.4]
+const VERSION = '3.5';            // 앱 화면 버전 [v3.5]
 const PCT_TOAST_MS = 1600;        // [v2.7] 답할 때 달성률 ▲▼ 보여 주는 시간(ms)
 const LONG_TEXT = 'Good morning, everyone. My name is Jiwoo, and I am learning English every day. After school, I like to read books and play soccer with my friends.';   // [v2.6] 점검 화면 긴 문장 (속도 확인용)
 const LOG_ON = true;              // [v2.3] 점검 기록(마이크·목소리·오류)을 서버 '점검기록' 시트로 보냄 (false면 끔)
@@ -1032,12 +1033,29 @@ function dadHistory(u){
       ${arrow(1, d < H.today)}<button class="chip" style="min-width:34px" onclick="dadCalOpen()">📅</button></div>${ev}${lv}${wbtn}${list}</div>`;
 }
 function dadDayGo(dir){ const H = DAD.user.hist; let d = (DAD_DAY == null ? H.today : DAD_DAY) + dir; if(d > H.today) d = H.today; DAD_DAY = d; renderDad(DAD); }
+/* [v3.5] 빠르게: 처음 열 때 최근 7일을 한 번에 받고, 지난 날은 폰에 저장해서 다시 안 물어요. 먼 날은 앞뒤 하루도 같이 */
+const DAD_PRE_DAYS = 7;   // 관리자창을 열 때 미리 받는 날 수
+let DAD_PRE = {};
+function ddKey(uid, d){ return 'yg_dd_' + uid + '_' + d; }
 async function dadDayLoad(d){   // 그날 알림·진도·단어 (오늘은 새로고침마다 다시)
-  if(DAD_DDLOAD[d]) return; DAD_DDLOAD[d] = 1;
-  const uid = DAD_UID;
-  try{ const j = await api('dadDay', {pin:DAD_PIN, uid, day:d}, {quiet:true}); if(uid === DAD_UID){ DAD_DD[d] = j; renderDad(DAD); } }
-  catch(e){ if(uid === DAD_UID){ DAD_DD[d] = {events:[], levels:[], words:[]}; renderDad(DAD); } }
-  finally{ DAD_DDLOAD[d] = 0; }
+  const uid = DAD_UID, H = DAD && DAD.user && DAD.user.hist; if(!H) return;
+  const t = H.today;
+  if(d < t){ const s = sget(ddKey(uid, d)); if(s){ try{ DAD_DD[d] = JSON.parse(s); renderDad(DAD); return; }catch(e){} } }
+  let want = DAD_PRE[uid] ? [d, d-1, d+1] : [d].concat(Array.from({length:DAD_PRE_DAYS}, (_, i)=>t - i));
+  DAD_PRE[uid] = 1;
+  want = [...new Set(want)].filter(x => x <= t && H.days[x] && !DAD_DD[x] && !DAD_DDLOAD[x] && !(x < t && sget(ddKey(uid, x))));
+  if(!want.length) return;
+  want.forEach(x => DAD_DDLOAD[x] = 1);
+  try{
+    const j = await api('dadDays', {pin:DAD_PIN, uid, days:want}, {quiet:true});
+    if(uid !== DAD_UID) return;
+    Object.keys(j.details || {}).forEach(k => {
+      const x = Number(k), v = j.details[k]; DAD_DD[x] = v;
+      if(x < t - 1 || (x < t && (v.levels||[]).length)) sset(ddKey(uid, x), JSON.stringify(v));   // 다 끝난 날만 폰에 저장
+    });
+    renderDad(DAD);
+  }catch(e){ if(uid === DAD_UID){ want.forEach(x => { if(!DAD_DD[x]) DAD_DD[x] = {events:[], levels:[], words:[]}; }); renderDad(DAD); } }
+  finally{ want.forEach(x => DAD_DDLOAD[x] = 0); }
 }
 function dadCalOpen(){ const H = DAD.user.hist, x = dayDate(DAD_DAY == null ? H.today : DAD_DAY); DAD_CAL = {y:x.y, m:x.m}; dadCalDraw(); }
 function dadCalMove(n){ let m = DAD_CAL.m + n, y = DAD_CAL.y; if(m < 1){ m = 12; y--; } if(m > 12){ m = 1; y++; } DAD_CAL = {y, m}; dadCalDraw(); }
