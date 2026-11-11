@@ -443,7 +443,8 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
 <script>
 /***************************************************************
  * 영공도전_jw 앱 화면
- * VERSION 3.1   [v3.1] 아빠 화면에 📊 진도 칸(레벨마다 외움 막대·%·🏆, 지금 레벨 표시)
+ * VERSION 3.2   [v3.2] 아빠 화면: 진도 🟨학습 중·✅외움 두 색, '어제 ○/목표', 📅 날짜별 기록(누르면 그날 단어) — 서버 v2.9와 짝
+ * VERSION 3.1  [v3.1] 아빠 화면에 📊 진도 칸(레벨마다 외움 막대·%·🏆, 지금 레벨 표시)
  * VERSION 3.0  [v3.0] 정답 칸(⭕/❌·다시 듣기·다음)을 문제 바로 아래로 올림, 남은 조각·다시/확인·모르겠어요 숨김
  * VERSION 2.9  [v2.9] 관리자 레벨 고르기에 💬 회화 1~3 추가 (서버 v2.8 회화 코스와 짝)
  *               [v2.8] 내 단어장 🔍 찾기: 한글로 넣어도 영어로 찾아 채워요
@@ -463,7 +464,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
  ***************************************************************/
 
 // ===================== 조절할 값 =====================
-const VERSION = '3.1';            // 앱 화면 버전 [v3.1]
+const VERSION = '3.2';            // 앱 화면 버전 [v3.2]
 const PCT_TOAST_MS = 1600;        // [v2.7] 답할 때 달성률 ▲▼ 보여 주는 시간(ms)
 const LONG_TEXT = 'Good morning, everyone. My name is Jiwoo, and I am learning English every day. After school, I like to read books and play soccer with my friends.';   // [v2.6] 점검 화면 긴 문장 (속도 확인용)
 const LOG_ON = true;              // [v2.3] 점검 기록(마이크·목소리·오류)을 서버 '점검기록' 시트로 보냄 (false면 끔)
@@ -988,11 +989,30 @@ function LV(lv, levels){ const l = (levels || (ST && ST.levels) || [])[lv-1]; re
 function dadProgress(u){
   const ls = myLevels(u.levels || [], u.courses);
   if(!ls.length) return '';
-  return '<div style="margin:10px 0 4px;padding:10px 12px;background:#f6f8fb;border-radius:12px"><div style="font-weight:700;margin-bottom:6px">📊 진도</div>' + ls.map(l=>{
-    const pct = l.total ? Math.round(l.learned*100/l.total) : 0, cur = l.lv===u.level;
+  return '<div style="margin:10px 0 4px;padding:10px 12px;background:#f6f8fb;border-radius:12px"><div style="font-weight:700;margin-bottom:6px">📊 진도 <span class="muted" style="font-weight:400;font-size:12px">🟨 학습 중(1~2번 맞힘) · ✅ 외움(3번 맞힘)</span></div>' + ls.map(l=>{
+    const ing = l.learning || 0, pct = l.total ? Math.round(l.learned*100/l.total) : 0, pi = l.total ? Math.round(ing*100/l.total) : 0, cur = l.lv===u.level;   // [v3.2] 학습 중
     return `<div style="padding:5px 0;${l.open?'':'opacity:.45;'}${cur?'color:#e8453c;font-weight:700;':''}">
-      <div style="display:flex;justify-content:space-between;gap:6px;font-size:14px"><span>${l.passed?'🏆':l.open?'🔓':'🔒'} ${esc(LV(l.lv, u.levels))} · ${esc(l.name)}${cur?' ◀ 지금':''}</span><span class="muted">${l.learned}/${l.total} (${pct}%)</span></div>
-      <div class="bar" style="height:8px;margin-top:3px"><i style="width:${pct}%"></i></div></div>`;
+      <div style="display:flex;justify-content:space-between;gap:6px;font-size:14px"><span>${l.passed?'🏆':l.open?'🔓':'🔒'} ${esc(LV(l.lv, u.levels))} · ${esc(l.name)}${cur?' ◀ 지금':''}</span><span class="muted">🟨 ${ing} · ✅ ${l.learned} / ${l.total}</span></div>
+      <div class="bar" style="height:8px;margin-top:3px;display:flex"><i style="width:${pct}%"></i><i style="width:${pi}%;background:#ffc93c"></i></div></div>`;
+  }).join('') + '</div>';
+}
+/* [v3.2] 아빠 화면 📅 날짜별 기록: 하루 한 줄, 누르면 그날 단어(✅/❌) */
+let DAD_HIST_OPEN = {};
+function dadHistToggle(el, key){ DAD_HIST_OPEN[key] = el.open; }
+function dadYesterday(u){
+  const y = (u.hist || [])[1];
+  if(!y) return '';
+  return y.n ? ` · 어제 ${y.n}/${y.goal}문제${y.n>=y.goal?' ✅':''}` : ' · 어제 쉼';
+}
+function dadHistory(u){
+  const hs = u.hist;
+  if(!hs || !hs.length) return '';
+  return '<div style="margin:10px 0 4px;padding:10px 12px;background:#f6f8fb;border-radius:12px"><div style="font-weight:700;margin-bottom:6px">📅 날짜별 기록 <span class="muted" style="font-weight:400;font-size:12px">누르면 그날 단어</span></div>' + hs.map((h,i)=>{
+    const lab = i===0 ? '오늘' : i===1 ? '어제' : '';
+    if(!h.n && !h.min) return `<div class="muted" style="padding:4px 0;font-size:14px">${esc(h.date)} ${lab} — 쉼</div>`;
+    const key = u.uid+'_'+h.day, head = `<b>${esc(h.date)}</b> ${lab} · ${h.n}문제${h.n>=h.goal?' ✅':''} · 맞힘 ${h.ok} · 틀림 ${h.ng} · ${h.min}분${h.nl?' · 새로 외움 '+h.nl:''}`;
+    const ws = (h.words||[]).map(w=>`<div style="display:flex;justify-content:space-between;gap:6px;padding:2px 0"><span>${w.ng?'❌':'✅'} ${esc(w.en)} <span class="muted">${esc(w.ko)}</span></span><span class="muted">${w.ok?'맞힘 '+w.ok:''}${w.ok&&w.ng?' · ':''}${w.ng?'틀림 '+w.ng:''}</span></div>`).join('');
+    return `<details ${DAD_HIST_OPEN[key]?'open':''} ontoggle="dadHistToggle(this,'${jsq(key)}')" style="padding:4px 0;font-size:14px;border-bottom:1px solid #eef1f5"><summary style="cursor:pointer">${head}</summary><div style="padding:4px 0 4px 8px;font-size:13px">${ws || '<span class="muted">단어 기록 없음 (이번 업데이트 전 기록)</span>'}</div></details>`;
   }).join('') + '</div>';
 }
 function myLevels(levels, courses){ return levels.filter(l=>(courses || ST.courses || ['daily']).indexOf(l.course || 'daily') >= 0); }
@@ -1910,8 +1930,9 @@ function renderDad(j){
   const u = j.user; DAD_UID = u.uid;
   document.getElementById('dadStatus').innerHTML =
     `<div style="font-size:18px;font-weight:700"><span class="dot ${u.studying?'live':''}"></span>${esc(u.name)} ${u.studying?'지금 공부 중! ('+u.sessionMin+'분째)':'지금은 쉬는 중'}</div>
-     <p class="muted">${esc(u.levelName||'레벨 '+u.level)} · 오늘 ${u.todayDone}/${u.goal}문제 · 오늘 ${u.todayMin}분 · 전체 ${u.totalMin}분 · 🔥 ${u.streak}일 ${u.diagDone?'':'· 진단 전'}</p>
+     <p class="muted">${esc(u.levelName||'레벨 '+u.level)} · 오늘 ${u.todayDone}/${u.goal}문제 · 오늘 ${u.todayMin}분 · 전체 ${u.totalMin}분 · 🔥 ${u.streak}일${dadYesterday(u)} ${u.diagDone?'':'· 진단 전'}</p>
      ${dadProgress(u)}
+     ${dadHistory(u)}
      <p class="muted" style="margin:6px 0 2px">공부 모드</p>
      <div class="row" style="flex-wrap:wrap" id="dadModes">${Object.keys(j.modes||{}).map(m=>`<button class="btn small ${m===u.mode?'':'gray'}" style="flex:1 1 30%" onclick="dadCall('dadSetMode',{mode:'${m}'})">${esc(j.modes[m])}</button>`).join('')}</div>`;   // [v2.4]
   // 그림판 설정 (입력 중이면 새로고침으로 지우지 않기)
