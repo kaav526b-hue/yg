@@ -264,6 +264,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
       </div>
     </div>
     <button class="btn green" id="eventBtn" style="display:none" onclick="openEventBox()">⏰ 이벤트 그림판이 도착했어요!</button>
+    <div id="topTest"></div><!-- [v4.5] 조각을 다 열면 레벨 테스트를 맨 위에 -->
     <div class="card">
       <div class="top"><b>오늘의 학습</b><span class="muted" id="todayTxt"></span></div>
       <div class="bar" style="margin-top:8px"><i id="todayBar"></i></div>
@@ -452,6 +453,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
 <script>
 /***************************************************************
  * 영공도전_jw 앱 화면
+ * VERSION 4.5   [v4.5] 조각을 다 열면 레벨 테스트 칸이 맨 위로, 선물은 '레벨 테스트 통과하면 받아요' 안내 → 통과 때 '🎁 선물 지급' — 서버 v3.8과 짝
  * VERSION 4.4   [v4.4] 🧪 시험 중 막대에 '📝 단계 시험'(안 연 맨 앞 단계)·'📝 레벨 테스트' 바로 보기 — 서버 v3.7과 짝
  * VERSION 4.3   [v4.3] 시험 하루 2번: 떨어지면 '❌ 틀린 단어만 공부하기' + 안내(100%로 채우면 오늘 한 번 더 / 내일 다시), 레벨 테스트 24시간 대기 → 내일,
  *                      단계 기회를 다 쓰면 '⏰ 내일 다시 도전' — 서버 v3.6(한 단계 집중)과 짝
@@ -488,7 +490,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
  ***************************************************************/
 
 // ===================== 조절할 값 =====================
-const VERSION = '4.4';            // 앱 화면 버전 [v4.4]
+const VERSION = '4.5';            // 앱 화면 버전 [v4.5]
 const PCT_TOAST_MS = 1600;        // [v2.7] 답할 때 달성률 ▲▼ 보여 주는 시간(ms)
 const LONG_TEXT = 'Good morning, everyone. My name is Jiwoo, and I am learning English every day. After school, I like to read books and play soccer with my friends.';   // [v2.6] 점검 화면 긴 문장 (속도 확인용)
 const LOG_ON = true;              // [v2.3] 점검 기록(마이크·목소리·오류)을 서버 '점검기록' 시트로 보냄 (false면 끔)
@@ -562,7 +564,7 @@ function sceneSVG(theme){
   </svg>`;
 }
 /* 그림판 그리기. b = {theme, pieces, opened[], done, prize, waiting}, hide = 아직 덮어 둘 단계 번호들 (애니메이션용) */
-function boardHTML(b, hide){
+function boardHTML(b, hide, needTest){   // [v4.5] needTest = 레벨 테스트 전이면 '통과하면 받아요'
   hide = hide || [];
   const n = b.pieces, cols = PIECE_COLS[n] || 4, order = PIECE_ORDER[n] || [...Array(n).keys()];
   const openTiles = {};
@@ -572,7 +574,7 @@ function boardHTML(b, hide){
   const showPrize = b.done && b.prize && !hide.length;
   return `<div class="board">${sceneSVG(b.theme)}
     <div class="tiles" style="grid-template-columns:repeat(${cols},1fr)">${tiles}</div>
-    ${b.done && b.prize ? `<div class="prizeTag ${showPrize?'on':''}">🎁 ${esc(b.prize)}</div>` : ''}
+    ${b.done && b.prize ? `<div class="prizeTag ${showPrize?'on':''}"${needTest?' style="white-space:normal;text-align:center;line-height:1.25"':''}>🎁 ${esc(b.prize)}${needTest?'<div style="font-size:13px;font-weight:700">📝 레벨 테스트 통과하면 받아요</div>':''}</div>` : ''}
     ${b.done && b.waiting && !hide.length ? `<div class="waitTag">${WAIT_PRIZE_MSG}</div>` : ''}
   </div>`;
 }
@@ -1123,7 +1125,7 @@ function renderHome(){
   const L = curLv();
   document.getElementById('boardTitle').textContent = '🧩 '+LV(L.lv)+' 그림판';
   document.getElementById('boardCount').textContent = '조각 '+L.board.opened.length+' / '+L.board.pieces;
-  document.getElementById('boardHome').innerHTML = boardHTML(L.board);
+  document.getElementById('boardHome').innerHTML = boardHTML(L.board, null, !L.passed);
   document.getElementById('stageTitle').textContent = LV(L.lv)+' · '+L.name+' 단계';
   document.getElementById('stageList').innerHTML = L.stages.map((s,i)=>{   // [v2.7] 달성률 막대 + 단계 시험
     const pct = s.pct || 0;
@@ -1141,12 +1143,17 @@ function renderHome(){
   else if(L.refill != null && L.refill < 100) t = `<button class="btn small" onclick="wrongStudy(ST.levels[${L.lv-1}].refillIds)">❌ 틀린 단어 ${L.refillN}개 공부하기 (지금 ${L.refill}%) → 100%면 다시 도전</button>`;   // [v4.3]
   else t = `<button class="btn small" onclick="confirmTest(${L.lv})">📝 ${LV(L.lv)} 테스트 도전! (통과하면 다음 레벨)</button>`;
   document.getElementById('testArea').innerHTML = t;
+  const topT = L.board.done && !L.passed;   // [v4.5] 조각을 다 열면 레벨 테스트를 맨 위에
+  document.getElementById('topTest').innerHTML = topT ? `<div class="card" style="border:2px solid var(--pri);text-align:center">
+    <div style="font-size:40px">📝</div><b style="font-size:18px">🎉 그림판 완성! ${esc(LV(L.lv))} 레벨 테스트 도전!</b>
+    <p class="muted" style="margin:6px 0">${L.board.prize ? '통과하면 🎁 선물: <b>'+esc(L.board.prize)+'</b>' : '통과하면 선물을 받아요'}</p>${t}</div>` : '';
+  if(topT) document.getElementById('testArea').innerHTML = '';
   document.getElementById('levelList').innerHTML = `<p class="muted" style="margin:4px 0">공부 모드: <b>${esc((ST.modes||{})[ST.mode]||'')}</b> <button class="chip" onclick="openSettings()">바꾸기</button></p>` + myLevels(ST.levels).map(l=>   // [v2.4]
     `<div class="lvrow ${l.open?'':'lock'}"><div class="top"><span>${l.passed?'🏆':l.open?'🔓':'🔒'} ${LV(l.lv)} · ${esc(l.name)}</span><span class="muted">외움 ${l.learned}/${l.total}</span></div></div>`).join('');
 }
 function openBoardModal(lv){
   const L = ST.levels[lv-1];
-  modal(`<h2>🧩 ${LV(lv)} 그림판</h2>${boardHTML(L.board)}
+  modal(`<h2>🧩 ${LV(lv)} 그림판</h2>${boardHTML(L.board, null, !L.passed)}
     <p class="muted">조각 ${L.board.opened.length} / ${L.board.pieces} · ${L.board.done ? (L.board.prize ? '완성!' : '다 열었어요!') : '뭐가 숨어 있을까요?'}</p>
     <button class="btn" onclick="closeModal()">닫기</button>`);
 }
@@ -1795,7 +1802,7 @@ async function finishQuiz(quit){
       if(r.pass) confetti();
       const wrong = r.review.filter(x=>!x.ok).map(x=>x.word);
       modal(`<div style="font-size:60px">${r.pass?'🏆':'💪'}</div><h2>${r.score}점 ${r.pass?'통과!':'아쉬워요'}</h2>
-        ${r.pass?`<p>${r.next?'<b>'+esc(r.next)+'</b>과 새 그림판이 열렸어요!':'🎓 이 코스 마지막 레벨까지 통과했어요!'}</p>`:`<p class="muted">${r.late?'시간이 초과됐어요. ':''}${ST.rules.passScore}점 넘으면 통과! ${retryMsg(r)}</p>`}
+        ${r.pass?`${r.prize?`<p style="font-size:20px;font-weight:800">🎁 선물 지급: ${esc(r.prize)}!<br><span class="muted" style="font-size:14px">아빠한테 받아요</span></p>`:''}<p>${r.next?'<b>'+esc(r.next)+'</b>과 새 그림판이 열렸어요!':'🎓 이 코스 마지막 레벨까지 통과했어요!'}</p>`:`<p class="muted">${r.late?'시간이 초과됐어요. ':''}${ST.rules.passScore}점 넘으면 통과! ${retryMsg(r)}</p>`}
         ${wrong.length?`<p class="muted">틀린 단어: ${esc(wrong.join(', '))}</p>`:''}
         ${!r.pass && (r.wrongIds||[]).length?`<button class="btn green" onclick="closeModal();wrongStudy(${esc(JSON.stringify(r.wrongIds))})">❌ 틀린 단어만 공부하기</button>`:''}
         <button class="btn${!r.pass?' gray':''}" onclick="closeModal()">확인</button>`);   // [v4.3]
@@ -1824,7 +1831,7 @@ function showPieces(pieces){
   if(!pieces || !pieces.length) return;
   const lv = pieces[0].lv, L = ST.levels[lv-1];
   const news = pieces.filter(p=>p.lv===lv).map(p=>p.stage);
-  modal(`<h2>🧩 조각이 열려요!</h2><p class="muted">${pieces.map(p=>esc(p.name)).join(', ')} 단계 통과</p><div id="pcBoard">${boardHTML(L.board, news)}</div>
+  modal(`<h2>🧩 조각이 열려요!</h2><p class="muted">${pieces.map(p=>esc(p.name)).join(', ')} 단계 통과</p><div id="pcBoard">${boardHTML(L.board, news, !L.passed)}</div>
     <p id="pcMsg" style="font-weight:700;min-height:24px"></p><button class="btn" onclick="closeModal();renderHome()">확인</button>`);
   setTimeout(()=>{
     const order = PIECE_ORDER[L.board.pieces];
@@ -1833,8 +1840,8 @@ function showPieces(pieces){
     setTimeout(()=>{
       const m = document.getElementById('pcMsg'); if(!m) return;
       if(L.board.done){
-        if(L.board.prize){ const pt = document.querySelector('#pcBoard .prizeTag'); if(pt) pt.classList.add('on'); m.innerHTML = '🎉 그림판 완성! 아빠한테 보여 주세요'; confetti(); }
-        else { document.getElementById('pcBoard').innerHTML = boardHTML(L.board); m.innerHTML = '그림판을 다 열었어요!'; }
+        if(L.board.prize){ const pt = document.querySelector('#pcBoard .prizeTag'); if(pt) pt.classList.add('on'); m.innerHTML = '🎉 그림판 완성!<br>📝 레벨 테스트를 통과하면 🎁 선물을 받아요'; confetti(); }   // [v4.5]
+        else { document.getElementById('pcBoard').innerHTML = boardHTML(L.board, null, !L.passed); m.innerHTML = '🎉 그림판을 다 열었어요!<br>📝 레벨 테스트를 통과하면 선물을 받아요'; }
       } else m.textContent = '뭐지? 🤔 남은 조각 '+left+'개';
     }, 1000);
   }, 500);
@@ -2069,7 +2076,7 @@ async function startMyStudy(){
  * ============================================================= */
 async function renderBox(){
   document.getElementById('boardList').innerHTML = ST.levels.filter(l=>(l.open && myLevels([l]).length) || l.board.opened.length).map(l=>
-    `<div class="card" onclick="openBoardModal(${l.lv})"><div class="top"><b>${LV(l.lv)} · ${esc(l.name)}</b><span class="muted">조각 ${l.board.opened.length}/${l.board.pieces}</span></div><div style="margin-top:8px">${boardHTML(l.board)}</div></div>`).join('');
+    `<div class="card" onclick="openBoardModal(${l.lv})"><div class="top"><b>${LV(l.lv)} · ${esc(l.name)}</b><span class="muted">조각 ${l.board.opened.length}/${l.board.pieces}</span></div><div style="margin-top:8px">${boardHTML(l.board, null, !l.passed)}</div></div>`).join('');
   const box = document.getElementById('prizeList');
   box.innerHTML = '<p class="muted">불러오는 중...</p>';
   try{
