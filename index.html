@@ -243,6 +243,8 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
       <select id="abLevel"><option value="1">레벨 1</option><option value="2">레벨 2</option><option value="3">레벨 3</option><option value="4">레벨 4</option><option value="5">레벨 5</option><option value="6">토익 1</option><option value="7">토익 2</option><option value="8">토익 3</option><option value="9">회화 1</option><option value="10">회화 2</option><option value="11">회화 3</option></select><!-- [v2.9] -->
       <button onclick="adminOp('level')">레벨 이동</button>
       <button onclick="adminOp('stage')">단계 넘김</button>
+      <button onclick="testStageNow()">📝 단계 시험</button><!-- [v4.4] -->
+      <button onclick="testLevelNow()">📝 레벨 테스트</button><!-- [v4.4] -->
       <button onclick="adminOp('levelpass')">레벨 통과</button>
       <button onclick="adminOp('final')">최종 단계</button>
       <button id="abAns" onclick="toggleShowAns()">정답 보기</button>
@@ -450,6 +452,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
 <script>
 /***************************************************************
  * 영공도전_jw 앱 화면
+ * VERSION 4.4   [v4.4] 🧪 시험 중 막대에 '📝 단계 시험'(안 연 맨 앞 단계)·'📝 레벨 테스트' 바로 보기 — 서버 v3.7과 짝
  * VERSION 4.3   [v4.3] 시험 하루 2번: 떨어지면 '❌ 틀린 단어만 공부하기' + 안내(100%로 채우면 오늘 한 번 더 / 내일 다시), 레벨 테스트 24시간 대기 → 내일,
  *                      단계 기회를 다 쓰면 '⏰ 내일 다시 도전' — 서버 v3.6(한 단계 집중)과 짝
  * VERSION 4.2   [v4.2] 파닉스 철자 보기 오답(bet 등 가짜 철자)도 설명: 다른 글자와 그 모음 소리('애' [æ] 등) + 🔊 내 답·정답 비교 듣기
@@ -485,7 +488,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
  ***************************************************************/
 
 // ===================== 조절할 값 =====================
-const VERSION = '4.3';            // 앱 화면 버전 [v4.3]
+const VERSION = '4.4';            // 앱 화면 버전 [v4.4]
 const PCT_TOAST_MS = 1600;        // [v2.7] 답할 때 달성률 ▲▼ 보여 주는 시간(ms)
 const LONG_TEXT = 'Good morning, everyone. My name is Jiwoo, and I am learning English every day. After school, I like to read books and play soccer with my friends.';   // [v2.6] 점검 화면 긴 문장 (속도 확인용)
 const LOG_ON = true;              // [v2.3] 점검 기록(마이크·목소리·오류)을 서버 '점검기록' 시트로 보냄 (false면 끔)
@@ -2250,6 +2253,13 @@ async function adminOp(op){
     if(j.newPieces && j.newPieces.length) showPieces(j.newPieces);
   }catch(e){ toast(e.message); if(e.res && e.res.pinError){ ADMIN_PIN=''; sset('yg_admin',''); renderAdminBar(); } }
 }
+/* [v4.4] 🧪 시험 사람: 단계 시험(안 연 맨 앞 단계)·레벨 테스트를 조건 없이 바로 */
+function testStageNow(){
+  const L = curLv(); const si = L.stages.findIndex(s=>!s.open);
+  if(si < 0){ toast('이 레벨 단계는 다 열렸어요. 레벨 테스트를 해 보세요'); return; }
+  startStageTest(L.lv, si);
+}
+function testLevelNow(){ const L = curLv(); if(L.passed){ toast('이미 통과한 레벨이에요. 레벨 이동으로 다른 레벨을 골라 주세요'); return; } startTest(L.lv); }
 function adminReset(){
   modal(`<h2>진도를 처음으로?</h2><p class="muted">${esc(ST.name)}의 레벨·복습 기록·그림판이 처음으로 돌아가요. 보상함은 남아요.</p><div class="row"><button class="btn gray" onclick="closeModal()">취소</button><button class="btn" onclick="closeModal();adminResetGo()">처음으로</button></div>`);
 }
