@@ -450,6 +450,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
 <script>
 /***************************************************************
  * 영공도전_jw 앱 화면
+ * VERSION 4.1   [v4.1] 오답이면 '🙋 내가 고른 ○○ → 원래 말 🔊 + 💡 이럴 때 써요(회화)·예문(단어)', 정답 설명에도 💡 이럴 때 써요(회화)
  * VERSION 4.0   [v4.0] 레벨 3 이상(토익·회화 포함) 문장 배열은 힌트 없음: 조각 하나만 놓아도 확인, '필요 없는 조각 (n개만 써요)' 안내 없음 (레벨 1·2는 그대로)
  *                      🧪 시험 사람은 문제마다 '✅ 통과'(맞힌 걸로 처리) — 학습·단계 시험·레벨 테스트·진단
  * VERSION 3.9   [v3.9] 🔧 점검 모드 없앰(진짜 사람 진도를 바꾸던 것) → 관리자창 '🧪 시험해 보기': 시험 사람으로 들어가 점검 막대로 끝까지 시험, '시험 끝'이면 원래 사람으로.
@@ -481,7 +482,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
  ***************************************************************/
 
 // ===================== 조절할 값 =====================
-const VERSION = '4.0';            // 앱 화면 버전 [v4.0]
+const VERSION = '4.1';            // 앱 화면 버전 [v4.1]
 const PCT_TOAST_MS = 1600;        // [v2.7] 답할 때 달성률 ▲▼ 보여 주는 시간(ms)
 const LONG_TEXT = 'Good morning, everyone. My name is Jiwoo, and I am learning English every day. After school, I like to read books and play soccer with my friends.';   // [v2.6] 점검 화면 긴 문장 (속도 확인용)
 const LOG_ON = true;              // [v2.3] 점검 기록(마이크·목소리·오류)을 서버 '점검기록' 시트로 보냄 (false면 끔)
@@ -1242,6 +1243,7 @@ function choose(k, btn){
   markChoice(q, k, ok);
   if(Q.mode === 'test' || Q.mode === 'stest'){ Q.answers.push(k); testCount(ok); afterAns(0); return; }   // [v2.2] 테스트도 바로 ⭕/❌ [v2.7] 단계 시험
   record(q, ok);
+  Q.picked = ok ? null : q.choices[k];   // [v4.1] 오답이면 내가 고른 보기를 설명
   feedback(q, ok);
 }
 /* [v2.2] 맞은 보기 초록 ⭕, 고른 틀린 보기 빨강 ❌ + 소리 */
@@ -1329,11 +1331,171 @@ function feedback(q, ok, dunnoFlag){
     fb.innerHTML = `<div class="fb good"><b style="color:var(--ok)">⭕ 정답!</b>${isG?extra:''}</div>`;
     afterAns(isG ? 900 : 0);   // [v3.6]
   } else {
-    fb.innerHTML = `<div class="fb bad"><b style="color:var(--bad)">${dunnoFlag?'🤷 괜찮아요, 이렇게 외워요':'❌ 아쉬워요'}</b> <span class="muted">오답노트에 넣었어요</span><div style="margin-top:6px">${extra}</div><button class="btn small" onclick="nextQ()">다음 ▶</button></div>`;
+    const picked = !dunnoFlag && Q.picked ? pickedHTML(Q.picked) : '';   // [v4.1]
+    Q.picked = null;
+    fb.innerHTML = `<div class="fb bad"><b style="color:var(--bad)">${dunnoFlag?'🤷 괜찮아요, 이렇게 외워요':'❌ 아쉬워요'}</b> <span class="muted">오답노트에 넣었어요</span><div style="margin-top:6px">${extra}</div>${useLine(q.en)}${picked}<button class="btn small" onclick="nextQ()">다음 ▶</button></div>`;
     Q.answered = true; drawNav();   // [v3.6] 틀리면 자동으로 안 넘어가요
   }
   fbToTop();   // [v3.0]
 }
+/* [v4.1] 오답일 때 '내가 고른 보기'가 원래 무슨 말인지 + 이럴 때 써요 */
+function useLine(en){ const u = en && YG_USE[en]; return u ? `<div class="muted" style="margin-top:4px">💡 이럴 때 써요: ${esc(u)}</div>` : ''; }
+function pickedHTML(c){
+  const ws = Object.keys(WMAP).map(k=>WMAP[k]);
+  const w = ws.find(x=>x.ko === c) || ws.find(x=>x.en === c);
+  if(!w) return '';
+  const u = YG_USE[w.en];
+  const how = u ? `💡 이럴 때 써요: ${esc(u)}` : (w.ex ? `예문: ${esc(w.ex)}${w.exKo?' · '+esc(w.exKo):''}` : '');
+  return `<div style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#00000022">
+    <div>🙋 내가 고른 <b>${esc(c)}</b> → <b>${esc(c === w.ko ? w.en : w.ko)}</b> <button class="chip" onclick="say('${jsq(w.en)}')">🔊</button></div>
+    ${how?`<div class="muted" style="margin-top:2px">${how}</div>`:''}</div>`;
+}
+/* [v4.1] 회화 표현 이럴 때 써요 (직원이 씀) */ const YG_USE = {
+  "Hello, nice to meet you.": "처음 만난 사람에게 인사할 때",
+  "How are you today?": "만난 사람에게 안부를 물을 때",
+  "Good morning!": "아침에 처음 만났을 때 인사로",
+  "See you tomorrow.": "내일 또 만날 친구와 헤어질 때",
+  "Long time no see.": "오래 못 본 사람을 다시 만났을 때",
+  "Have a nice day.": "낮에 헤어지며 인사할 때(가게 직원도 많이 써요)",
+  "Good night.": "밤에 헤어지거나 자러 갈 때",
+  "Take care.": "헤어질 때 몸조심하라는 마음으로",
+  "I am happy.": "기쁜 내 기분을 말할 때",
+  "I am so tired.": "많이 지치고 힘들 때",
+  "I feel great today.": "오늘 컨디션이 아주 좋을 때",
+  "I am hungry.": "밥 먹고 싶을 때, 식사 전에",
+  "I am a little nervous.": "발표·시험 전처럼 긴장될 때",
+  "That is so funny.": "친구 말이나 장면이 웃길 때",
+  "I am bored.": "할 일이 없어 지루할 때",
+  "I am really excited.": "여행·생일처럼 기대될 때",
+  "Thank you so much.": "Thank you보다 더 크게 고마울 때",
+  "You are welcome.": "누가 고맙다고 할 때 대답으로",
+  "I am sorry.": "내 잘못을 사과할 때(Excuse me와 달라요)",
+  "It is okay.": "상대가 사과할 때 괜찮다고 할 때",
+  "No problem.": "고맙다·미안하다는 말에 가볍게 대답할 때",
+  "Excuse me.": "말을 걸거나 길을 비켜 달라고 할 때",
+  "Thanks for your help.": "누가 도와준 뒤 고마움을 말할 때",
+  "My mistake.": "작은 실수를 가볍게 인정할 때",
+  "Can you help me?": "모르는 게 있어 도움을 부탁할 때",
+  "Please wait a moment.": "상대에게 잠깐 기다려 달라고 할 때",
+  "Can you say that again?": "잘 못 들어서 다시 듣고 싶을 때",
+  "Please speak slowly.": "말이 빨라 알아듣기 어려울 때",
+  "Can I come in?": "교실·방에 들어가기 전에 허락받을 때",
+  "Can you open the door?": "손이 바쁠 때 문을 열어 달라고 할 때",
+  "Let me see.": "대답 전에 잠깐 생각할 시간이 필요할 때",
+  "Come here, please.": "누군가를 내 쪽으로 부를 때",
+  "Yes, of course.": "부탁을 기꺼이 들어줄 때",
+  "No, thank you.": "권하는 것을 예의 있게 거절할 때",
+  "I think so.": "확실하진 않지만 그렇다고 볼 때",
+  "I do not know.": "질문의 답을 모를 때",
+  "Sounds good.": "제안이나 계획이 마음에 들 때",
+  "Me too.": "상대와 같은 생각·기분일 때",
+  "I agree with you.": "토론·회의에서 상대 의견에 찬성할 때",
+  "Really?": "놀라운 말을 듣고 되물을 때",
+  "My name is Seoyun.": "처음 만나 내 이름을 소개할 때",
+  "I am from Korea.": "외국 사람에게 내 나라를 말할 때",
+  "I am a student.": "내가 무엇을 하는 사람인지 말할 때",
+  "I live in Seoul.": "내가 사는 곳을 소개할 때",
+  "I like music.": "자기소개에서 좋아하는 것을 말할 때",
+  "I have a brother.": "가족을 소개할 때(형·오빠·남동생 모두)",
+  "What is your name?": "처음 만난 사람의 이름을 물을 때",
+  "Where are you from?": "상대의 나라나 고향을 물을 때",
+  "A table for two, please.": "식당에 들어가 인원수를 말할 때",
+  "Can I see the menu?": "식당에서 메뉴판을 달라고 할 때",
+  "I will have this one.": "메뉴를 가리키며 주문할 때",
+  "It is very delicious.": "음식을 먹어 보고 맛을 칭찬할 때",
+  "Can I get some water?": "식당에서 물을 부탁할 때",
+  "No onions, please.": "주문할 때 빼고 싶은 재료를 말할 때",
+  "The bill, please.": "식사를 마치고 계산하고 싶을 때",
+  "I am full.": "더 못 먹을 만큼 배부를 때",
+  "One iced coffee, please.": "카페에서 음료를 주문할 때",
+  "For here or to go?": "카페 직원이 먹고 갈지 물을 때",
+  "To go, please.": "음식·음료를 가져가겠다고 할 때",
+  "What size would you like?": "직원이 음료·옷 크기를 물을 때",
+  "A large one, please.": "크기를 물을 때 큰 것을 고를 때",
+  "Can I pay by card?": "계산할 때 카드가 되는지 물을 때",
+  "Less sugar, please.": "덜 달게 해 달라고 주문할 때",
+  "Where is the restroom?": "식당·가게에서 화장실을 찾을 때",
+  "How much is this?": "가게에서 물건 값을 물을 때",
+  "It is too expensive.": "값이 비싸서 망설여질 때",
+  "Can I try this on?": "옷가게에서 옷을 입어 보고 싶을 때",
+  "Do you have a smaller size?": "옷·신발이 커서 다른 크기를 찾을 때",
+  "I am just looking.": "가게 직원이 도와줄지 물을 때",
+  "I will take it.": "물건을 사기로 정했을 때",
+  "Can I get a bag?": "계산할 때 봉투가 필요할 때",
+  "Is it on sale?": "물건이 할인하는지 물을 때",
+  "Where is the station?": "길에서 기차·지하철역을 찾을 때",
+  "How do I get there?": "가는 길이나 방법을 물을 때",
+  "Go straight.": "길을 알려 줄 때 앞으로 가라고",
+  "Turn left at the corner.": "길을 알려 줄 때 꺾는 곳을 말할 때",
+  "Is it far from here?": "가려는 곳까지 거리를 물을 때",
+  "It is near the bank.": "장소를 다른 건물 기준으로 알려 줄 때",
+  "I am lost.": "길을 몰라 도움이 필요할 때",
+  "Can you show me on the map?": "말로는 길을 모르겠어서 지도로 볼 때",
+  "Which bus goes downtown?": "시내로 가는 버스를 물을 때",
+  "Where do I get off?": "버스·지하철에서 내릴 곳을 물을 때",
+  "How long does it take?": "가는 데 걸리는 시간을 물을 때",
+  "Let us take a taxi.": "친구에게 택시를 타자고 할 때",
+  "Please stop here.": "택시 기사님께 내릴 곳을 말할 때",
+  "The train is late.": "기차가 예정보다 늦게 올 때",
+  "I missed the bus.": "버스를 놓쳐 늦게 된 까닭을 말할 때",
+  "Is this seat taken?": "빈자리에 앉기 전에 물을 때",
+  "What time is it?": "지금 시각을 물을 때",
+  "It is almost noon.": "점심때가 다 되었음을 말할 때",
+  "I am running late.": "약속에 늦을 것 같아 미리 알릴 때",
+  "It is sunny today.": "해가 쨍한 날씨를 말할 때",
+  "It looks like rain.": "하늘이 흐려 우산을 챙길 때",
+  "It is freezing outside.": "아주 추운 날 바깥 날씨를 말할 때",
+  "What day is it today?": "오늘 요일을 물을 때(날짜는 date)",
+  "See you at three.": "만날 시각을 정하고 헤어질 때",
+  "Here is my passport.": "공항 직원에게 여권을 내밀 때",
+  "I am here for vacation.": "입국 심사에서 여행 목적을 물을 때",
+  "Where is gate ten?": "공항에서 탈 곳(게이트)을 찾을 때",
+  "My flight was delayed.": "비행기가 늦어 사정을 말할 때",
+  "I lost my bag.": "가방을 잃어버려 도움을 청할 때",
+  "Window seat, please.": "비행기·기차 자리를 고를 때",
+  "How long is the flight?": "비행기를 타고 가는 시간을 물을 때",
+  "I have nothing to declare.": "세관에서 신고할 짐이 없을 때",
+  "I have a reservation.": "호텔·식당에 예약하고 왔을 때",
+  "What time is checkout?": "호텔에서 방을 비우는 시각을 물을 때",
+  "Can I leave my bag here?": "호텔·가게에 짐을 맡기고 싶을 때",
+  "The air conditioner is broken.": "숙소 물건이 고장 나 알릴 때",
+  "Can I have another towel?": "호텔에서 물건을 더 받고 싶을 때",
+  "Is breakfast included?": "호텔 값에 아침이 들었는지 물을 때",
+  "What is the Wi-Fi password?": "호텔·카페에서 인터넷을 쓰고 싶을 때",
+  "Please call a taxi for me.": "호텔 직원에게 택시를 부탁할 때",
+  "Hello, this is Seoyun.": "전화를 걸어 나를 밝힐 때(I am 대신)",
+  "Can I speak to Mr. Kim?": "전화로 특정한 사람을 바꿔 달라고 할 때",
+  "He is not here now.": "찾는 사람이 자리에 없다고 알릴 때",
+  "Can I take a message?": "전화를 대신 받아 말을 전해 줄 때",
+  "I will call you back.": "지금 통화가 어려워 나중에 걸 때",
+  "Sorry, wrong number.": "전화를 잘못 걸었거나 받았을 때",
+  "I cannot hear you well.": "통화 소리가 작거나 끊길 때",
+  "Text me later.": "친구에게 나중에 문자하라고 할 때",
+  "Are you free tomorrow?": "약속을 잡기 전에 시간을 물을 때",
+  "Let us meet at six.": "친구와 만날 시각을 정할 때",
+  "Where should we meet?": "약속 장소를 정할 때",
+  "How about Saturday?": "날짜나 생각을 제안할 때",
+  "I have other plans.": "약속 제안을 예의 있게 거절할 때",
+  "Can we change the time?": "정한 약속 시각을 바꾸고 싶을 때",
+  "I am on my way.": "약속 장소로 가는 중이라고 알릴 때",
+  "Sorry I am late.": "약속에 늦게 도착해 사과할 때",
+  "I have a headache.": "머리가 아파 쉬고 싶을 때",
+  "I have a cold.": "콧물·기침 등 감기 기운이 있을 때",
+  "My stomach hurts.": "배가 아파 보건실·병원에 갈 때",
+  "I need to see a doctor.": "많이 아파서 진료가 필요할 때",
+  "Where is the pharmacy?": "약을 사러 약국을 찾을 때",
+  "I feel much better now.": "아프다가 몸이 나아졌을 때",
+  "Get well soon.": "아픈 친구를 걱정하며 위로할 때",
+  "Are you okay?": "넘어지거나 힘들어 보이는 사람에게",
+  "Good job!": "친구가 무언가를 잘 해냈을 때",
+  "You can do it.": "도전하는 친구를 응원할 때",
+  "I am proud of you.": "가족·친구가 해낸 일을 칭찬할 때",
+  "That is amazing.": "놀랍도록 대단한 것을 봤을 때",
+  "Do not give up.": "힘들어서 그만두려는 친구에게",
+  "Good luck on your test.": "시험 보러 가는 친구를 응원할 때",
+  "You look great today.": "친구의 옷차림·모습을 칭찬할 때",
+  "Keep up the good work.": "잘하고 있는 사람을 계속 격려할 때"
+};
 /* [v3.0] 정답 칸을 문제 바로 아래(화면 위쪽)로 옮기고, 남은 조각·다시/확인·모르겠어요는 숨김 */
 function fbToTop(){
   const fb = document.getElementById('fbArea'), qa = document.getElementById('qArea');
