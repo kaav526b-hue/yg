@@ -450,6 +450,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
 <script>
 /***************************************************************
  * 영공도전_jw 앱 화면
+ * VERSION 3.7   [v3.7] 관리자창 15초 자동 새로받기 없앰(들어올 때만 한 번 받아서 '불러오는 중…'이 계속 안 뜸) — 서버 v3.4(텔레그램 판 끝 한 통)와 짝
   * VERSION 3.6   [v3.6] 문제 넘김 모드: ⏩ 자동(2초 머문 뒤 넘어감) / 👆 버튼(다음 ▶ 눌러야 넘어감) + ◀ 뒤로로 지난 문제 결과 다시 보기
  * VERSION 3.5   [v3.5] 관리자창 날짜별이 빠르게: 처음 열 때 최근 7일 한 번에 받기, 지난 날은 폰에 저장, 먼 날은 앞뒤 하루 같이 — 서버 v3.3과 짝
  * VERSION 3.4   [v3.4] '아빠 화면' → '🔧 관리자창', '관리자 모드' → '🔧 점검 모드', 날짜 줄에 그날 알림(텔레그램과 같은 글)·📅 그날 진도, 진도 칸은 📊 전체 진도, 기록 전 날은 ✅/공부함 — 서버 v3.1과 짝
@@ -475,7 +476,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
  ***************************************************************/
 
 // ===================== 조절할 값 =====================
-const VERSION = '3.6';            // 앱 화면 버전 [v3.6]
+const VERSION = '3.7';            // 앱 화면 버전 [v3.7]
 const PCT_TOAST_MS = 1600;        // [v2.7] 답할 때 달성률 ▲▼ 보여 주는 시간(ms)
 const LONG_TEXT = 'Good morning, everyone. My name is Jiwoo, and I am learning English every day. After school, I like to read books and play soccer with my friends.';   // [v2.6] 점검 화면 긴 문장 (속도 확인용)
 const LOG_ON = true;              // [v2.3] 점검 기록(마이크·목소리·오류)을 서버 '점검기록' 시트로 보냄 (false면 끔)
@@ -508,7 +509,7 @@ const SPEED_DEFAULT = 2;           // [v2.5] 처음 속도 단계 (2 = 보통)
 const GAME_WRONG_WEIGHT = 2;       // [v2.5] 오늘 틀린 단어가 게임에 나오는 배수 (2 = 두 배 자주)
 const TEASER_MIN_SEC = 90;        // 이벤트 예약 중 티저 문구 간격 — 최소(초)
 const TEASER_MAX_SEC = 220;       // 티저 문구 간격 — 최대(초)
-const DAD_REFRESH_SEC = 15;       // 아빠 화면 자동 새로고침(초)
+const DAD_REFRESH_SEC = 15;       // ([v3.7]부터 안 씀) 관리자창 자동 새로고침 — 이제 들어올 때만 새로 받아요
 const TEASERS = [                 // 이벤트 예약 중에 랜덤으로 뜨는 문구
   '🎁 어? 곧 뭔가 열리겠는데요?', '👀 뭔가 다가오고 있어요...', '🔥 이 기세면 그림판이 열려요!',
   '✨ 아빠가 뭔가 준비한 것 같아요', '🍎 조금만 더! 뭔가 느낌이 와요', '🧩 조각 흔들리는 소리가 들려요...'
@@ -2042,7 +2043,7 @@ async function dadLogin(){
     DAD_UID = sget('yg_dad_uid');
     renderDad(j);
     if(DAD_UID && j.user && j.user.uid !== DAD_UID) dadPick(DAD_UID);
-    clearInterval(dadTimer); dadTimer = setInterval(dadRefresh, DAD_REFRESH_SEC*1000);
+    clearInterval(dadTimer);   // [v3.7] 15초 자동 새로받기 없앰 — 관리자창에 들어올 때만 한 번 받아요
   }catch(e){ document.getElementById('dadMsg').textContent = e.message; if(e.res && e.res.pinError) sset('yg_pin',''); }
 }
 async function dadCall(action, data){
