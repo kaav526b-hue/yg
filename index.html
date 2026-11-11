@@ -443,7 +443,9 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
 <script>
 /***************************************************************
  * 영공도전_jw 앱 화면
- * VERSION 2.9   [v2.9] 관리자 레벨 고르기에 💬 회화 1~3 추가 (서버 v2.8 회화 코스와 짝)
+ * VERSION 3.1   [v3.1] 아빠 화면에 📊 진도 칸(레벨마다 외움 막대·%·🏆, 지금 레벨 표시)
+ * VERSION 3.0  [v3.0] 정답 칸(⭕/❌·다시 듣기·다음)을 문제 바로 아래로 올림, 남은 조각·다시/확인·모르겠어요 숨김
+ * VERSION 2.9  [v2.9] 관리자 레벨 고르기에 💬 회화 1~3 추가 (서버 v2.8 회화 코스와 짝)
  *               [v2.8] 내 단어장 🔍 찾기: 한글로 넣어도 영어로 찾아 채워요
  *               [v2.7] 단계 달성률 %(막대·실시간 ▲▼·끝나고 변화), 단계 통과 시험, 예문 문장 배열(영어 배열·한글 배열 조사 자동·가짜 조각),
  *                      📌 내 단어장(직접 추가·🔍 인터넷 찾기·앱 단어 담기·복습·게임), 삼성 인터넷 다크 모드 대응
@@ -461,7 +463,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
  ***************************************************************/
 
 // ===================== 조절할 값 =====================
-const VERSION = '2.9';            // 앱 화면 버전 [v2.9]
+const VERSION = '3.1';            // 앱 화면 버전 [v3.1]
 const PCT_TOAST_MS = 1600;        // [v2.7] 답할 때 달성률 ▲▼ 보여 주는 시간(ms)
 const LONG_TEXT = 'Good morning, everyone. My name is Jiwoo, and I am learning English every day. After school, I like to read books and play soccer with my friends.';   // [v2.6] 점검 화면 긴 문장 (속도 확인용)
 const LOG_ON = true;              // [v2.3] 점검 기록(마이크·목소리·오류)을 서버 '점검기록' 시트로 보냄 (false면 끔)
@@ -982,6 +984,17 @@ function showTab(t){
 function curLv(){ return ST.levels[ST.level-1]; }
 /* [v2.4] 레벨 이름 (레벨 3 / 토익 1) */
 function LV(lv, levels){ const l = (levels || (ST && ST.levels) || [])[lv-1]; return l && l.label ? l.label : '레벨 '+lv; }
+/* [v3.1] 아빠 화면 📊 진도: 레벨마다 외움 막대 한 줄, 지금 레벨은 색, 잠긴 레벨은 흐리게 */
+function dadProgress(u){
+  const ls = myLevels(u.levels || [], u.courses);
+  if(!ls.length) return '';
+  return '<div style="margin:10px 0 4px;padding:10px 12px;background:#f6f8fb;border-radius:12px"><div style="font-weight:700;margin-bottom:6px">📊 진도</div>' + ls.map(l=>{
+    const pct = l.total ? Math.round(l.learned*100/l.total) : 0, cur = l.lv===u.level;
+    return `<div style="padding:5px 0;${l.open?'':'opacity:.45;'}${cur?'color:#e8453c;font-weight:700;':''}">
+      <div style="display:flex;justify-content:space-between;gap:6px;font-size:14px"><span>${l.passed?'🏆':l.open?'🔓':'🔒'} ${esc(LV(l.lv, u.levels))} · ${esc(l.name)}${cur?' ◀ 지금':''}</span><span class="muted">${l.learned}/${l.total} (${pct}%)</span></div>
+      <div class="bar" style="height:8px;margin-top:3px"><i style="width:${pct}%"></i></div></div>`;
+  }).join('') + '</div>';
+}
 function myLevels(levels, courses){ return levels.filter(l=>(courses || ST.courses || ['daily']).indexOf(l.course || 'daily') >= 0); }
 
 function renderHome(){
@@ -1195,6 +1208,16 @@ function feedback(q, ok, dunnoFlag){
   } else {
     fb.innerHTML = `<div class="fb bad"><b style="color:var(--bad)">${dunnoFlag?'🤷 괜찮아요, 이렇게 외워요':'❌ 아쉬워요'}</b> <span class="muted">오답노트에 넣었어요</span><div style="margin-top:6px">${extra}</div><button class="btn small" onclick="nextQ()">다음 ▶</button></div>`;
   }
+  fbToTop();   // [v3.0]
+}
+/* [v3.0] 정답 칸을 문제 바로 아래(화면 위쪽)로 옮기고, 남은 조각·다시/확인·모르겠어요는 숨김 */
+function fbToTop(){
+  const fb = document.getElementById('fbArea'), qa = document.getElementById('qArea');
+  const qb = qa && qa.querySelector('.qbox');
+  if(!fb || !qb) return;
+  qb.after(fb);
+  qa.querySelectorAll('.pool, .row, .dunno').forEach(e=>{ if(!fb.contains(e)) e.style.display = 'none'; });
+  try{ fb.scrollIntoView({block:'nearest', behavior:'smooth'}); }catch(e){}
 }
 
 /* 문장 배열 */
@@ -1888,6 +1911,7 @@ function renderDad(j){
   document.getElementById('dadStatus').innerHTML =
     `<div style="font-size:18px;font-weight:700"><span class="dot ${u.studying?'live':''}"></span>${esc(u.name)} ${u.studying?'지금 공부 중! ('+u.sessionMin+'분째)':'지금은 쉬는 중'}</div>
      <p class="muted">${esc(u.levelName||'레벨 '+u.level)} · 오늘 ${u.todayDone}/${u.goal}문제 · 오늘 ${u.todayMin}분 · 전체 ${u.totalMin}분 · 🔥 ${u.streak}일 ${u.diagDone?'':'· 진단 전'}</p>
+     ${dadProgress(u)}
      <p class="muted" style="margin:6px 0 2px">공부 모드</p>
      <div class="row" style="flex-wrap:wrap" id="dadModes">${Object.keys(j.modes||{}).map(m=>`<button class="btn small ${m===u.mode?'':'gray'}" style="flex:1 1 30%" onclick="dadCall('dadSetMode',{mode:'${m}'})">${esc(j.modes[m])}</button>`).join('')}</div>`;   // [v2.4]
   // 그림판 설정 (입력 중이면 새로고침으로 지우지 않기)
