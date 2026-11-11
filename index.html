@@ -450,6 +450,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
 <script>
 /***************************************************************
  * 영공도전_jw 앱 화면
+ * VERSION 3.8   [v3.8] 관리자창에 사용자 화면과 같은 그림판: 📊 전체 진도 아래 지금 레벨 그림판(조각 n / 6), '그림판 상품 정하기' 레벨마다 작은 그림판
  * VERSION 3.7   [v3.7] 관리자창 15초 자동 새로받기 없앰(들어올 때만 한 번 받아서 '불러오는 중…'이 계속 안 뜸) — 서버 v3.4(텔레그램 판 끝 한 통)와 짝
   * VERSION 3.6   [v3.6] 문제 넘김 모드: ⏩ 자동(2초 머문 뒤 넘어감) / 👆 버튼(다음 ▶ 눌러야 넘어감) + ◀ 뒤로로 지난 문제 결과 다시 보기
  * VERSION 3.5   [v3.5] 관리자창 날짜별이 빠르게: 처음 열 때 최근 7일 한 번에 받기, 지난 날은 폰에 저장, 먼 날은 앞뒤 하루 같이 — 서버 v3.3과 짝
@@ -476,7 +477,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
  ***************************************************************/
 
 // ===================== 조절할 값 =====================
-const VERSION = '3.7';            // 앱 화면 버전 [v3.7]
+const VERSION = '3.8';            // 앱 화면 버전 [v3.8]
 const PCT_TOAST_MS = 1600;        // [v2.7] 답할 때 달성률 ▲▼ 보여 주는 시간(ms)
 const LONG_TEXT = 'Good morning, everyone. My name is Jiwoo, and I am learning English every day. After school, I like to read books and play soccer with my friends.';   // [v2.6] 점검 화면 긴 문장 (속도 확인용)
 const LOG_ON = true;              // [v2.3] 점검 기록(마이크·목소리·오류)을 서버 '점검기록' 시트로 보냄 (false면 끔)
@@ -509,7 +510,8 @@ const SPEED_DEFAULT = 2;           // [v2.5] 처음 속도 단계 (2 = 보통)
 const GAME_WRONG_WEIGHT = 2;       // [v2.5] 오늘 틀린 단어가 게임에 나오는 배수 (2 = 두 배 자주)
 const TEASER_MIN_SEC = 90;        // 이벤트 예약 중 티저 문구 간격 — 최소(초)
 const TEASER_MAX_SEC = 220;       // 티저 문구 간격 — 최대(초)
-const DAD_REFRESH_SEC = 15;       // ([v3.7]부터 안 씀) 관리자창 자동 새로고침 — 이제 들어올 때만 새로 받아요
+const DAD_BOARD_SMALL_PX = 220;  // [v3.8] 관리자창 '그림판 상품 정하기' 칸의 레벨별 작은 그림판 너비(px)
+const DAD_REFRESH_SEC = 15;      // ([v3.7]부터 안 씀) 관리자창 자동 새로고침 — 이제 들어올 때만 새로 받아요
 const TEASERS = [                 // 이벤트 예약 중에 랜덤으로 뜨는 문구
   '🎁 어? 곧 뭔가 열리겠는데요?', '👀 뭔가 다가오고 있어요...', '🔥 이 기세면 그림판이 열려요!',
   '✨ 아빠가 뭔가 준비한 것 같아요', '🍎 조금만 더! 뭔가 느낌이 와요', '🧩 조각 흔들리는 소리가 들려요...'
@@ -997,6 +999,13 @@ function curLv(){ return ST.levels[ST.level-1]; }
 /* [v2.4] 레벨 이름 (레벨 3 / 토익 1) */
 function LV(lv, levels){ const l = (levels || (ST && ST.levels) || [])[lv-1]; return l && l.label ? l.label : '레벨 '+lv; }
 /* [v3.1] 아빠 화면 📊 진도: 레벨마다 외움 막대 한 줄, 지금 레벨은 색, 잠긴 레벨은 흐리게 */
+/* [v3.8] 관리자창 🧩 지금 레벨 그림판: 사용자 화면과 같은 그림판 (열린 칸은 그림이 보임) */
+function dadBoard(u){
+  const l = (u.levels || []).find(x=>x.lv===u.level);
+  if(!l || !l.board) return '';
+  const b = l.board;
+  return `<div style="margin:10px 0 4px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b>🧩 ${esc(LV(l.lv, u.levels))} 그림판</b><span style="font-weight:700">조각 ${b.opened.length} / ${b.pieces}${b.done?' 🎉':''}</span></div>${boardHTML(b)}</div>`;
+}
 function dadProgress(u){
   const ls = myLevels(u.levels || [], u.courses);
   if(!ls.length) return '';
@@ -2096,6 +2105,7 @@ function renderDad(j){
      <p class="muted">${esc(u.levelName||'레벨 '+u.level)} · 오늘 ${u.todayDone}/${u.goal}문제 · 오늘 ${u.todayMin}분 · 전체 ${u.totalMin}분 · 🔥 ${u.streak}일${dadYesterday(u)} ${u.diagDone?'':'· 진단 전'}</p>
      ${dadHistory(u)}
      ${dadProgress(u)}
+     ${dadBoard(u)}
      <p class="muted" style="margin:6px 0 2px">공부 모드</p>
      <div class="row" style="flex-wrap:wrap" id="dadModes">${Object.keys(j.modes||{}).map(m=>`<button class="btn small ${m===u.mode?'':'gray'}" style="flex:1 1 30%" onclick="dadCall('dadSetMode',{mode:'${m}'})">${esc(j.modes[m])}</button>`).join('')}</div>`;   // [v2.4]
   // 그림판 설정 (입력 중이면 새로고침으로 지우지 않기)
@@ -2104,6 +2114,7 @@ function renderDad(j){
     document.getElementById('dadBoards').innerHTML = myLevels(u.levels, u.courses).map(l=>{   // [v2.4] 지금 모드의 코스만
       const b = l.board, st = b.done ? (b.paidOut ? '✅ 완성·보상함 넣음' : '🧩 다 열림 · 상품 기다리는 중') : (l.open ? '진행 중' : '🔒 잠김');
       return `<div class="lvrow"><div class="top"><b>${LV(l.lv, u.levels)} · ${esc(l.name)}</b><span class="muted">조각 ${b.opened.length}/${b.pieces}</span></div>
+        <div style="max-width:${DAD_BOARD_SMALL_PX}px;margin:6px 0">${boardHTML(b)}</div>
         <div class="muted">${st} · 외움 ${l.learned}/${l.total}${l.passed?' · 🏆 테스트 통과':''}${l.waitMin?` · 테스트 ${fmtWait(l.waitMin)} 대기 <button class="chip" onclick="dadCall('dadClearCooldown',{level:${l.lv}})">지금 다시 보게</button>`:''}</div>
         <div class="row" style="margin-top:4px"><select id="bt_${l.lv}" style="flex:0 0 38%">${j.themes.map(t=>`<option value="${t}" ${t===b.theme?'selected':''}>${THEME_NAME[t]}</option>`).join('')}</select>
         <input id="bp_${l.lv}" maxlength="30" placeholder="상품 (예: 치킨 1개)" value="${esc(b.prize)}" ${b.paidOut?'disabled':''}></div>
