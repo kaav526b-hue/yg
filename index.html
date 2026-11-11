@@ -238,7 +238,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
 <!-- 메인 (탭 4개) -->
 <div class="scr" id="main">
   <div id="adminBar">
-    <div class="row" style="justify-content:space-between"><b style="flex:0 0 auto">🔧 점검 모드</b><span class="muted" style="color:#cbb8ff;flex:0 0 auto" id="abWho"></span><button style="flex:0 0 auto" onclick="toggleAdminBar()">접기</button></div>
+    <div class="row" style="justify-content:space-between"><b style="flex:0 0 auto">🧪 시험 중</b><span class="muted" style="color:#cbb8ff;flex:0 0 auto" id="abWho"></span><button style="flex:0 0 auto" onclick="toggleAdminBar()">접기</button><button style="flex:0 0 auto;background:#ffb020;color:#222" onclick="testExit()">시험 끝</button></div><!-- [v3.9] -->
     <div class="ab" id="abBody">
       <select id="abLevel"><option value="1">레벨 1</option><option value="2">레벨 2</option><option value="3">레벨 3</option><option value="4">레벨 4</option><option value="5">레벨 5</option><option value="6">토익 1</option><option value="7">토익 2</option><option value="8">토익 3</option><option value="9">회화 1</option><option value="10">회화 2</option><option value="11">회화 3</option></select><!-- [v2.9] -->
       <button onclick="adminOp('level')">레벨 이동</button>
@@ -387,10 +387,10 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
       <div class="card"><b>📝 최근 기록</b><div class="log" id="dadLog"></div></div>
       <div class="card"><button class="btn gray small" onclick="dadDeleteUser()">🗑 이 사용자 지우기</button></div>
     </div>
-    <div class="card">
-      <b>🔧 점검 모드</b>
-      <p class="muted">켜면 <b>이 폰</b>의 사용자 화면 위에 점검 막대가 생겨요. 레벨 이동, 단계 넘김, 정답 보기 등을 쓸 수 있어요. 지우 폰에서는 켜지 마세요.</p>
-      <button class="btn blue" id="adminToggle" onclick="toggleAdmin()"></button>
+    <div class="card"><!-- [v3.9] 점검 모드 없앰 → 🧪 시험해 보기 -->
+      <b>🧪 시험해 보기</b>
+      <p class="muted">이 폰에서 <b>🧪 시험</b> 사람으로 들어가요. 학습 → 단계 시험 → 조각 열림 → 레벨 테스트를 끝까지 해 볼 수 있어요. <b>진짜 사람(지우·서윤 등) 진도는 안 바뀌어요.</b><br>하루 공부량·공부 모드·그림판 상품은 위 사용자 목록에서 '🧪 시험'을 골라 진짜 사람처럼 정해요.</p>
+      <button class="btn blue" onclick="testEnter()">🧪 시험 사람으로 들어가기</button>
       <button class="btn gray small" onclick="goKid()">사용자 화면으로 가기</button>
     </div>
     <div class="card">
@@ -450,6 +450,8 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
 <script>
 /***************************************************************
  * 영공도전_jw 앱 화면
+ * VERSION 3.9   [v3.9] 🔧 점검 모드 없앰(진짜 사람 진도를 바꾸던 것) → 관리자창 '🧪 시험해 보기': 시험 사람으로 들어가 점검 막대로 끝까지 시험, '시험 끝'이면 원래 사람으로.
+ *                      예전 점검 모드가 켜진 폰은 저절로 꺼짐, 사용자 화면 '다른 사람으로 바꾸기' 없앰 — 서버 v3.5와 짝
  * VERSION 3.8   [v3.8] 관리자창에 사용자 화면과 같은 그림판: 📊 전체 진도 아래 지금 레벨 그림판(조각 n / 6), '그림판 상품 정하기' 레벨마다 작은 그림판
  * VERSION 3.7   [v3.7] 관리자창 15초 자동 새로받기 없앰(들어올 때만 한 번 받아서 '불러오는 중…'이 계속 안 뜸) — 서버 v3.4(텔레그램 판 끝 한 통)와 짝
   * VERSION 3.6   [v3.6] 문제 넘김 모드: ⏩ 자동(2초 머문 뒤 넘어감) / 👆 버튼(다음 ▶ 눌러야 넘어감) + ◀ 뒤로로 지난 문제 결과 다시 보기
@@ -477,7 +479,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
  ***************************************************************/
 
 // ===================== 조절할 값 =====================
-const VERSION = '3.8';            // 앱 화면 버전 [v3.8]
+const VERSION = '3.9';            // 앱 화면 버전 [v3.9]
 const PCT_TOAST_MS = 1600;        // [v2.7] 답할 때 달성률 ▲▼ 보여 주는 시간(ms)
 const LONG_TEXT = 'Good morning, everyone. My name is Jiwoo, and I am learning English every day. After school, I like to read books and play soccer with my friends.';   // [v2.6] 점검 화면 긴 문장 (속도 확인용)
 const LOG_ON = true;              // [v2.3] 점검 기록(마이크·목소리·오류)을 서버 '점검기록' 시트로 보냄 (false면 끔)
@@ -510,7 +512,8 @@ const SPEED_DEFAULT = 2;           // [v2.5] 처음 속도 단계 (2 = 보통)
 const GAME_WRONG_WEIGHT = 2;       // [v2.5] 오늘 틀린 단어가 게임에 나오는 배수 (2 = 두 배 자주)
 const TEASER_MIN_SEC = 90;        // 이벤트 예약 중 티저 문구 간격 — 최소(초)
 const TEASER_MAX_SEC = 220;       // 티저 문구 간격 — 최대(초)
-const DAD_BOARD_SMALL_PX = 220;  // [v3.8] 관리자창 '그림판 상품 정하기' 칸의 레벨별 작은 그림판 너비(px)
+const TEST_UID = 'utest';         // [v3.9] 🧪 시험 사람 번호 — 바꾸지 마세요 (서버 TEST_UID와 같아야 해요)
+const DAD_BOARD_SMALL_PX = 220; // [v3.8] 관리자창 '그림판 상품 정하기' 칸의 레벨별 작은 그림판 너비(px)
 const DAD_REFRESH_SEC = 15;      // ([v3.7]부터 안 씀) 관리자창 자동 새로고침 — 이제 들어올 때만 새로 받아요
 const TEASERS = [                 // 이벤트 예약 중에 랜덤으로 뜨는 문구
   '🎁 어? 곧 뭔가 열리겠는데요?', '👀 뭔가 다가오고 있어요...', '🔥 이 기세면 그림판이 열려요!',
@@ -565,7 +568,7 @@ function boardHTML(b, hide){
 }
 
 let SERVER = '', UID = '', ST = null, BANK = [], WMAP = {};
-let ADMIN_PIN = '', SHOWANS = false, AB_FOLD = false;
+let ADMIN_PIN = '', SHOWANS = false, AB_FOLD = false, TESTING = false;   // [v3.9] TESTING = 🧪 시험 사람으로 들어옴
 let lastAnswerAt = 0, teaserTimer = null, giftShown = false, beatTimer = null;
 
 /* ---------- [v2.1] 탭 이름·아이콘 ---------- */
@@ -909,6 +912,8 @@ async function boot(){
   const isDad = readHash();
   SERVER = sget('yg_server');
   ADMIN_PIN = sget('yg_admin');
+  TESTING = sget('yg_test') === '1' && sget('yg_uid') === TEST_UID;   // [v3.9] 시험 사람으로 들어왔을 때만
+  if(!TESTING && ADMIN_PIN){ ADMIN_PIN = ''; sset('yg_admin', ''); sset('yg_test', ''); }   // [v3.9] 예전 점검 모드는 저절로 꺼짐
   if(!SERVER){ go('setup'); return; }
   if(isDad){ openDad(); return; }
   UID = sget('yg_uid');
@@ -1141,7 +1146,6 @@ function openSettings(){
     <div class="row" style="flex-wrap:wrap">${ST.goalChoices.map(g=>`<button class="btn small ${g===ST.goal?'':'gray'}" style="flex:0 0 30%" onclick="setGoal(${g})">${g}</button>`).join('')}</div>
     <p class="muted">공부 모드</p>
     <div class="row" style="flex-wrap:wrap">${Object.keys(ST.modes||{}).map(m=>`<button class="btn small ${m===ST.mode?'':'gray'}" style="flex:1 1 30%" onclick="setMode('${m}')">${esc(ST.modes[m])}</button>`).join('')}</div>
-    ${ADMIN_PIN?'<button class="btn gray small" onclick="switchUser()">👥 다른 사람으로 바꾸기 (점검 모드)</button>':''}
     <button class="btn gray small" onclick="closeModal();openCheck()">🩺 점검 (소리·마이크 문제 찾기)</button>
     <button class="btn" onclick="closeModal()">닫기</button>
     <p class="muted">앱 v${VERSION}</p>`);
@@ -2003,10 +2007,10 @@ function gEnd(){
  *  🔧 관리자 막대 (아빠 화면에서 켠 폰에만) [v2.0]
  * ============================================================= */
 function renderAdminBar(){
-  const on = !!ADMIN_PIN;
+  const on = TESTING && !!ADMIN_PIN;   // [v3.9] 시험 사람일 때만
   document.getElementById('adminBar').classList.toggle('on', on);
   if(!on) return;
-  document.getElementById('abWho').textContent = '대상: '+(ST?ST.name:'');
+  document.getElementById('abWho').textContent = '진짜 진도는 안 바뀌어요';
   document.getElementById('abLevel').value = ST ? ST.level : 1;
   document.getElementById('abAns').classList.toggle('on', SHOWANS);
   document.getElementById('abAns').textContent = SHOWANS ? '정답 보기 켬' : '정답 보기';
@@ -2097,7 +2101,6 @@ function renderDad(j){
       + `<button onclick="DAD_ORDER=DAD.users.map(u=>u.uid);renderDad(DAD)">↕ 순서</button><button onclick="dadAddUser()">➕ 새 사람</button>`;
   document.getElementById('dadNoUser').textContent = j.users.length ? '' : '아직 등록한 사람이 없어요. ➕ 새 사람으로 이름을 등록하고 앱 링크를 보내 주세요.';
   document.getElementById('dadUserBody').style.display = j.user ? '' : 'none';
-  document.getElementById('adminToggle').textContent = ADMIN_PIN ? '🔧 이 폰 점검 모드 끄기' : '🔧 이 폰에서 점검 모드 켜기';
   if(!j.user) return;
   const u = j.user; DAD_UID = u.uid;
   document.getElementById('dadStatus').innerHTML =
@@ -2142,10 +2145,20 @@ function dadDeleteUser(){
   modal(`<h2>"${esc(name)}" 지우기</h2><p class="muted">이 사람의 진도와 복습 기록이 모두 지워져요. 되돌릴 수 없어요. (보상함 기록은 남아요)</p><div class="row"><button class="btn gray" onclick="closeModal()">취소</button><button class="btn" onclick="closeModal();dadDeleteGo()">지우기</button></div>`);
 }
 function dadDeleteGo(){ dadCall('dadDeleteUser').then(j=>{ if(j){ toast('지웠어요'); DAD_UID=''; sset('yg_dad_uid',''); dadCall('dad'); } }); }
-function toggleAdmin(){
-  if(ADMIN_PIN){ ADMIN_PIN=''; sset('yg_admin',''); toast('이 폰 점검 모드를 껐어요'); }
-  else { ADMIN_PIN = DAD_PIN; sset('yg_admin', DAD_PIN); toast('🔧 이 폰 점검 모드를 켰어요. 사용자 화면으로 가 보세요'); }
-  renderDad(DAD);
+/* [v3.9] 🧪 시험해 보기: 이 폰을 시험 사람으로 바꿔 들어가고, '시험 끝'이면 원래 사람으로 */
+async function testEnter(){
+  try{
+    const j = await api('dadTestEnter', {pin:DAD_PIN, uid:''});
+    const cur = sget('yg_uid');
+    if(cur !== j.uid) sset('yg_before_uid', cur || '');
+    sset('yg_uid', j.uid); sset('yg_test', '1'); sset('yg_admin', DAD_PIN);
+    goKid();
+  }catch(e){ toast(e.message); }
+}
+function testExit(){
+  sset('yg_uid', sget('yg_before_uid') || ''); sset('yg_before_uid', '');
+  sset('yg_test', ''); sset('yg_admin', '');
+  toast('시험을 끝냈어요'); setTimeout(()=>location.reload(), 400);
 }
 function goKid(){ location.hash = ''; location.reload(); }
 async function copyLink(){ const v = document.getElementById('appLink').value; try{ await navigator.clipboard.writeText(v); toast('복사했어요. 가족에게 보내 주세요'); }catch(e){ document.getElementById('appLink').select(); toast('길게 눌러 복사하세요'); } }
