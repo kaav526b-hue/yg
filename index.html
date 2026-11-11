@@ -390,6 +390,11 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
       <div class="card"><b>📝 최근 기록</b><div class="log" id="dadLog"></div></div>
       <div class="card"><button class="btn gray small" onclick="dadDeleteUser()">🗑 이 사용자 지우기</button></div>
     </div>
+    <div class="card"><!-- [v4.6] 이 폰이 누구로 들어가는지 + 바꾸기 -->
+      <b>📱 이 폰의 사용자</b>
+      <p style="margin:6px 0" id="phoneWho"></p>
+      <button class="btn gray small" onclick="phonePick()">👥 이 폰 사람 바꾸기</button>
+    </div>
     <div class="card"><!-- [v3.9] 점검 모드 없앰 → 🧪 시험해 보기 -->
       <b>🧪 시험해 보기</b>
       <p class="muted">이 폰에서 <b>🧪 시험</b> 사람으로 들어가요. 학습 → 단계 시험 → 조각 열림 → 레벨 테스트를 끝까지 해 볼 수 있어요. <b>진짜 사람(지우·서윤 등) 진도는 안 바뀌어요.</b><br>하루 공부량·공부 모드·그림판 상품은 위 사용자 목록에서 '🧪 시험'을 골라 진짜 사람처럼 정해요.</p>
@@ -453,6 +458,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
 <script>
 /***************************************************************
  * 영공도전_jw 앱 화면
+ * VERSION 4.6   [v4.6] 관리자창 '📱 이 폰의 사용자'(이 폰이 누구로 들어가는지 + 👥 사람 바꾸기), 시험 끝 뒤 '이 폰은 ○○로 들어가요' 안내
  * VERSION 4.5   [v4.5] 조각을 다 열면 레벨 테스트 칸이 맨 위로, 선물은 '레벨 테스트 통과하면 받아요' 안내 → 통과 때 '🎁 선물 지급' — 서버 v3.8과 짝
  * VERSION 4.4   [v4.4] 🧪 시험 중 막대에 '📝 단계 시험'(안 연 맨 앞 단계)·'📝 레벨 테스트' 바로 보기 — 서버 v3.7과 짝
  * VERSION 4.3   [v4.3] 시험 하루 2번: 떨어지면 '❌ 틀린 단어만 공부하기' + 안내(100%로 채우면 오늘 한 번 더 / 내일 다시), 레벨 테스트 24시간 대기 → 내일,
@@ -490,7 +496,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
  ***************************************************************/
 
 // ===================== 조절할 값 =====================
-const VERSION = '4.5';            // 앱 화면 버전 [v4.5]
+const VERSION = '4.6';            // 앱 화면 버전 [v4.6]
 const PCT_TOAST_MS = 1600;        // [v2.7] 답할 때 달성률 ▲▼ 보여 주는 시간(ms)
 const LONG_TEXT = 'Good morning, everyone. My name is Jiwoo, and I am learning English every day. After school, I like to read books and play soccer with my friends.';   // [v2.6] 점검 화면 긴 문장 (속도 확인용)
 const LOG_ON = true;              // [v2.3] 점검 기록(마이크·목소리·오류)을 서버 '점검기록' 시트로 보냄 (false면 끔)
@@ -1000,7 +1006,9 @@ async function skipDiag(){
 /* =============================================================
  *  메인 화면
  * ============================================================= */
-function enterMain(){ go('main'); renderAdminBar(); showTab(sget('yg_tab') || 'tabStudy'); refreshSpeedUI(); }
+function enterMain(){ go('main'); renderAdminBar(); showTab(sget('yg_tab') || 'tabStudy'); refreshSpeedUI();
+  if(sget('yg_whonote') === '1'){ sset('yg_whonote', ''); setTimeout(()=>toast('📱 이 폰은 '+ST.name+'(으)로 들어가요'), 600); }   // [v4.6] 시험 끝 뒤 안내
+}
 function showTab(t){
   sset('yg_tab', t);
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on', x.id===t));
@@ -2341,6 +2349,7 @@ function renderDad(j){
       + `<button onclick="DAD_ORDER=DAD.users.map(u=>u.uid);renderDad(DAD)">↕ 순서</button><button onclick="dadAddUser()">➕ 새 사람</button>`;
   document.getElementById('dadNoUser').textContent = j.users.length ? '' : '아직 등록한 사람이 없어요. ➕ 새 사람으로 이름을 등록하고 앱 링크를 보내 주세요.';
   document.getElementById('dadUserBody').style.display = j.user ? '' : 'none';
+  document.getElementById('phoneWho').innerHTML = phoneWhoText();   // [v4.6]
   if(!j.user) return;
   const u = j.user; DAD_UID = u.uid;
   document.getElementById('dadStatus').innerHTML =
@@ -2395,9 +2404,25 @@ async function testEnter(){
     goKid();
   }catch(e){ toast(e.message); }
 }
+/* [v4.6] 📱 이 폰이 누구로 들어가는지 (관리자창) */
+function phoneWhoText(){
+  const id = sget('yg_uid'), u = DAD && (DAD.users||[]).find(x=>x.uid===id);
+  return id ? (u ? `이 폰은 <b>${esc(u.name)}</b>(으)로 들어가요` : '이 폰은 지금 없는 사람으로 되어 있어요') : '이 폰은 아직 사람이 정해지지 않았어요 (들어가면 이름을 넣어요)';
+}
+function phonePick(){
+  const us = (DAD && DAD.users) || [];
+  modal(`<h2>📱 이 폰 사람 바꾸기</h2><p class="muted">이 폰에서 공부하면 고른 사람 기록으로 쌓여요.</p>
+    ${us.map(u=>`<button class="btn ${u.uid===sget('yg_uid')?'':'gray'} small" onclick="phoneSet('${jsq(u.uid)}')">👤 ${esc(u.name)}</button>`).join('')}
+    <button class="btn gray small" onclick="closeModal()">닫기</button>`);
+}
+function phoneSet(uid){
+  sset('yg_uid', uid); sset('yg_before_uid', ''); sset('yg_test', ''); sset('yg_admin', '');
+  closeModal(); renderDad(DAD);
+  const u = (DAD.users||[]).find(x=>x.uid===uid); toast('📱 이 폰은 이제 '+(u?u.name:'')+'(으)로 들어가요');
+}
 function testExit(){
   sset('yg_uid', sget('yg_before_uid') || ''); sset('yg_before_uid', '');
-  sset('yg_test', ''); sset('yg_admin', '');
+  sset('yg_test', ''); sset('yg_admin', ''); sset('yg_whonote', '1');   // [v4.6] 돌아간 뒤 '이 폰은 ○○' 안내
   toast('시험을 끝냈어요'); setTimeout(()=>location.reload(), 400);
 }
 function goKid(){ location.hash = ''; location.reload(); }
