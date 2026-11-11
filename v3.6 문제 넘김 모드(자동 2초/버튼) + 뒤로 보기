@@ -148,6 +148,11 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
 .chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
 .chips button{background:#fff;border-radius:18px;padding:7px 12px;font-size:14px;white-space:nowrap;box-shadow:0 1px 3px #0001}
 .chips button.on{background:var(--pri);color:#fff}
+.qnav{display:flex;gap:6px;align-items:center;justify-content:space-between;margin:6px 0 4px}   /* [v3.6] 넘김 줄 */
+.qnav button{background:#fff;border-radius:18px;padding:8px 14px;font-size:15px;white-space:nowrap;box-shadow:0 1px 3px #0001}
+.qnav button:disabled{opacity:.35}
+.qnav button.go{background:var(--pri);color:#fff;font-weight:700}
+.pastTag{text-align:center;font-size:13px;color:#b07a00;background:#fff6dc;border-radius:12px;padding:5px;margin-bottom:6px}
 /* 사과 게임 */
 #game{padding:0;background:linear-gradient(#7ec8ff,#d9f1ff);height:100%;overflow:hidden;position:relative}
 #hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:12px 14px;font-weight:700;z-index:3}
@@ -322,7 +327,9 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
 <div class="scr" id="quiz">
   <div class="qhead"><button class="qx" onclick="quitQuiz()">✕</button><div class="bar"><i id="qBar"></i></div><span id="qScore"></span><button class="chip spdBtn" onclick="cycleSpeed()" style="padding:4px 8px;white-space:nowrap">🐢</button><span class="muted" id="qCount"></span></div>
   <div class="tbar" id="qTimerWrap" style="display:none"><i id="qTimer"></i></div>
+  <div class="qnav" id="qNav" style="display:none"></div>   <!-- [v3.6] ◀ 뒤로 · 모드 · 다음 ▶ -->
   <div id="qArea"></div>
+  <div id="qPast" style="display:none"></div>   <!-- [v3.6] 지난 문제 다시 보기 -->
 </div>
 
 <!-- 사과 게임 -->
@@ -443,6 +450,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
 <script>
 /***************************************************************
  * 영공도전_jw 앱 화면
+  * VERSION 3.6   [v3.6] 문제 넘김 모드: ⏩ 자동(2초 머문 뒤 넘어감) / 👆 버튼(다음 ▶ 눌러야 넘어감) + ◀ 뒤로로 지난 문제 결과 다시 보기
  * VERSION 3.5   [v3.5] 관리자창 날짜별이 빠르게: 처음 열 때 최근 7일 한 번에 받기, 지난 날은 폰에 저장, 먼 날은 앞뒤 하루 같이 — 서버 v3.3과 짝
  * VERSION 3.4   [v3.4] '아빠 화면' → '🔧 관리자창', '관리자 모드' → '🔧 점검 모드', 날짜 줄에 그날 알림(텔레그램과 같은 글)·📅 그날 진도, 진도 칸은 📊 전체 진도, 기록 전 날은 ✅/공부함 — 서버 v3.1과 짝
  * VERSION 3.3   [v3.3] 들어가기는 아빠가 등록한 이름으로만(다른 사람 바꾸기·사람 목록은 관리자만), 아빠 화면 ↕ 순서·➕ 새 사람, 날짜별 기록 한 줄(◀ ▶ 📅 달력) — 서버 v3.0과 짝
@@ -467,7 +475,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
  ***************************************************************/
 
 // ===================== 조절할 값 =====================
-const VERSION = '3.5';            // 앱 화면 버전 [v3.5]
+const VERSION = '3.6';            // 앱 화면 버전 [v3.6]
 const PCT_TOAST_MS = 1600;        // [v2.7] 답할 때 달성률 ▲▼ 보여 주는 시간(ms)
 const LONG_TEXT = 'Good morning, everyone. My name is Jiwoo, and I am learning English every day. After school, I like to read books and play soccer with my friends.';   // [v2.6] 점검 화면 긴 문장 (속도 확인용)
 const LOG_ON = true;              // [v2.3] 점검 기록(마이크·목소리·오류)을 서버 '점검기록' 시트로 보냄 (false면 끔)
@@ -484,7 +492,9 @@ const TITLE_KID = '🍎 영공도전';        // [v2.1] 사용자 화면 탭 이
 const BEAT_SEC = 30;              // 서버에 "공부 중" 신호 보내는 간격(초)
 const ACTIVE_WINDOW_SEC = 45;     // 마지막으로 문제 푼 뒤 이 시간(초) 안이어야 공부 시간으로 인정
 const FLUSH_EVERY = 5;            // 공부 결과를 이 문제 수마다 서버에 저장
-const RIGHT_NEXT_MS = 900;        // 맞혔을 때 다음 문제로 넘어가는 시간(1000 = 1초)
+const AUTO_NEXT_MS = 2000;        // [v3.6] 자동 모드: 답한 뒤 결과를 보여 주고 이만큼(2000 = 2초) 머문 뒤 다음 문제로 (문장 배열은 0.9초 더)
+const NAV_HIST_MAX = 30;          // [v3.6] ◀ 뒤로로 다시 볼 수 있는 지난 문제 수
+const RIGHT_NEXT_MS = 900;        // ([v3.6]부터 안 씀 → AUTO_NEXT_MS) 맞혔을 때 다음 문제로 넘어가는 시간(1000 = 1초)
 const SPEAK_TRIES = 3;            // 말하기 문제: 이만큼 틀리면 "다음"으로 넘어갈 수 있게 함
 const GAME_ROUND = 15;            // 사과 게임 한 판에 떨어지는 사과 수
 const GAME_MIN_WORDS = 3;         // 게임하려면 오늘 공부한 단어가 최소 이만큼 있어야 함
@@ -1160,9 +1170,10 @@ function startQuiz(mode, qs, extra){
 }
 function nextQ(){
   if(!Q) return;   // [v2.7] 그만둔 뒤 늦게 오는 다음 문제 막기
-  clearInterval(Q.timer); stopMic();
+  clearInterval(Q.timer); stopMic(); clearTimeout(Q.autoT);
+  navSave();   // [v3.6]
   Q.i++; Q.lock = false;
-  if(Q.i >= Q.qs.length){ finishQuiz(); return; }
+  if(Q.i >= Q.qs.length){ navHide(); finishQuiz(); return; }
   const q = Q.qs[Q.i];
   document.getElementById('qBar').style.width = Math.round(Q.i/Q.qs.length*100)+'%';
   document.getElementById('qCount').textContent = (Q.i+1)+' / '+Q.qs.length;
@@ -1178,6 +1189,7 @@ function nextQ(){
   if(type==='arrange' || type==='sent_en' || type==='sent_ko') Q.placed = [];
   if(['sound','pic','listen'].includes(type) || (type==='meaning')) setTimeout(()=>say(q.say), 250);
   if(Q.mode==='test') startTimer();
+  drawNav();   // [v3.6]
 }
 function promptHTML(q, type){
   const big = (t)=>`<div class="qbig">${esc(t)}</div>`;
@@ -1210,7 +1222,7 @@ function choose(k, btn){
   if(Q.mode === 'diag'){ Q.answers.push(k); btn.classList.add('picked'); sfx('tap'); setTimeout(nextQ, 180); return; }
   const ok = k === q.answer;
   markChoice(q, k, ok);
-  if(Q.mode === 'test' || Q.mode === 'stest'){ Q.answers.push(k); testCount(ok); setTimeout(nextQ, TEST_NEXT_MS); return; }   // [v2.2] 테스트도 바로 ⭕/❌ [v2.7] 단계 시험
+  if(Q.mode === 'test' || Q.mode === 'stest'){ Q.answers.push(k); testCount(ok); afterAns(0); return; }   // [v2.2] 테스트도 바로 ⭕/❌ [v2.7] 단계 시험
   record(q, ok);
   feedback(q, ok);
 }
@@ -1234,7 +1246,7 @@ function dunno(){
   if(Q.mode === 'test' || Q.mode === 'stest'){
     const isArr = ['arrange','sent_en','sent_ko'].includes(Q.type);
     Q.answers.push(isArr ? '' : -1); if(!isArr) markChoice(q, -1, false); else showArrAnswer(q, false);
-    testCount(false); setTimeout(nextQ, isArr ? TEST_NEXT_MS+900 : TEST_NEXT_MS); return; }
+    testCount(false); afterAns(isArr ? 900 : 0); return; }
   if(!['arrange','sent_en','sent_ko','speak'].includes(Q.type)) markChoice(q, -1, false); else sfx('bad');
   record(q, false);
   feedback(q, false, true);
@@ -1281,9 +1293,10 @@ function feedback(q, ok, dunnoFlag){
   const fb = document.getElementById('fbArea');
   if(ok){
     fb.innerHTML = `<div class="fb good"><b style="color:var(--ok)">⭕ 정답!</b>${isG?extra:''}</div>`;
-    setTimeout(nextQ, isG ? RIGHT_NEXT_MS+900 : RIGHT_NEXT_MS);
+    afterAns(isG ? 900 : 0);   // [v3.6]
   } else {
     fb.innerHTML = `<div class="fb bad"><b style="color:var(--bad)">${dunnoFlag?'🤷 괜찮아요, 이렇게 외워요':'❌ 아쉬워요'}</b> <span class="muted">오답노트에 넣었어요</span><div style="margin-top:6px">${extra}</div><button class="btn small" onclick="nextQ()">다음 ▶</button></div>`;
+    Q.answered = true; drawNav();   // [v3.6] 틀리면 자동으로 안 넘어가요
   }
   fbToTop();   // [v3.0]
 }
@@ -1361,7 +1374,7 @@ function checkArrange(){
   Q.lock = true; lastAnswerAt = Date.now();
   const given = Q.placed.map(k=>q.tokens[k]).join(q.type === 'sent_ko' ? '|' : ' ');   // [v2.7]
   const ok = given === q.answer;
-  if(Q.mode === 'stest'){ Q.answers.push(given); showArrAnswer(q, ok); testCount(ok); setTimeout(nextQ, TEST_NEXT_MS+900); return; }
+  if(Q.mode === 'stest'){ Q.answers.push(given); showArrAnswer(q, ok); testCount(ok); afterAns(900); return; }
   sfx(ok ? 'ok' : 'bad');   // [v2.2]
   record(q, ok); feedback(q, ok);
 }
@@ -1403,8 +1416,81 @@ function startTimer(){
   Q.timer = setInterval(()=>{
     const left = 1 - (Date.now()-t0)/(sec*1000);
     bar.style.width = Math.max(0,left*100)+'%';
-    if(left<=0 && !Q.lock){ Q.lock = true; Q.answers.push(-1); clearInterval(Q.timer); markChoice(Q.qs[Q.i], -1, false); testCount(false); setTimeout(nextQ, TEST_NEXT_MS); }   // [v2.2]
+    if(left<=0 && !Q.lock){ Q.lock = true; Q.answers.push(-1); clearInterval(Q.timer); markChoice(Q.qs[Q.i], -1, false); testCount(false); afterAns(0); }   // [v2.2]
   }, 100);
+}
+
+/* [v3.6] 넘김 모드: ⏩ 자동(AUTO_NEXT_MS 머문 뒤 넘어감) / 👆 버튼(다음 ▶을 눌러야 넘어감). 고른 모드는 폰에 기억.
+   ◀ 뒤로 = 지난 문제 결과(내 답·정답·⭕/❌)를 그대로 다시 보기 — 보기만 하고 답은 못 바꿔요. 실력 진단은 정답을 안 보여 줘서 안 씀 */
+const NM_KEY = 'yg_nextmode';
+let NEXT_MODE = (()=>{ try{ return localStorage.getItem(NM_KEY)==='btn' ? 'btn' : 'auto'; }catch(e){ return 'auto'; } })();
+function navOn(){ return Q && Q.mode !== 'diag'; }
+function navSave(){
+  if(!navOn()) return;
+  if(!Q.hist) Q.hist = [];
+  const qa = document.getElementById('qArea');
+  if(Q.i >= 0 && Q.i < Q.qs.length && qa && qa.innerHTML){ Q.hist.push({n:Q.i+1, html:qa.innerHTML}); if(Q.hist.length > NAV_HIST_MAX) Q.hist.shift(); }
+  Q.view = null; Q.answered = false; Q.autoExtra = 0;
+  const qp = document.getElementById('qPast'); if(qp){ qp.style.display = 'none'; qp.innerHTML = ''; }
+  if(qa) qa.style.display = '';
+}
+function navHide(){ const el = document.getElementById('qNav'); if(el) el.style.display = 'none'; const qp = document.getElementById('qPast'); if(qp){ qp.style.display = 'none'; qp.innerHTML = ''; } const qa = document.getElementById('qArea'); if(qa) qa.style.display = ''; }
+function drawNav(){
+  const el = document.getElementById('qNav'); if(!el) return;
+  if(!navOn()){ el.style.display = 'none'; return; }
+  const hist = Q.hist || [], past = Q.view != null;
+  const canBack = past ? Q.view > 0 : (hist.length > 0 && !(Q.mode === 'test' && !Q.lock));   // 시간 재는 테스트는 답한 뒤에만
+  const canNext = past || !!Q.answered;
+  el.style.display = '';
+  el.innerHTML = `<button ${canBack?'':'disabled'} onclick="qBack()">◀ 뒤로</button>`
+    + `<button onclick="toggleNextMode()">${NEXT_MODE==='btn'?'👆 버튼 모드':'⏩ 자동 모드'}</button>`
+    + `<button class="${canNext?'go':''}" ${canNext?'':'disabled'} onclick="qFwd()">${past?'앞으로 ▶':'다음 ▶'}</button>`;
+}
+function toggleNextMode(){
+  NEXT_MODE = NEXT_MODE === 'btn' ? 'auto' : 'btn';
+  try{ localStorage.setItem(NM_KEY, NEXT_MODE); }catch(e){}
+  toast(NEXT_MODE === 'btn' ? '👆 버튼 모드: 다음 ▶을 눌러야 넘어가요' : '⏩ 자동 모드: 맞히면 '+(AUTO_NEXT_MS/1000)+'초 뒤 넘어가요');
+  if(Q){ clearTimeout(Q.autoT); if(NEXT_MODE === 'auto' && Q.autoOK && Q.view == null) armAuto(); }
+  drawNav();
+}
+/* 답한 뒤 부름 (extra = 더 머무는 시간 ms) */
+function afterAns(extra){
+  if(!Q) return;
+  Q.answered = true; Q.autoOK = true; Q.autoExtra = extra || 0;
+  if(NEXT_MODE === 'auto' && Q.view == null) armAuto();
+  drawNav();
+}
+function armAuto(){
+  clearTimeout(Q.autoT);
+  const myQ = Q, idx = Q.i;
+  Q.autoT = setTimeout(()=>{ if(Q === myQ && Q.i === idx && Q.view == null) nextQ(); }, AUTO_NEXT_MS + (Q.autoExtra || 0));
+}
+function qFwd(){
+  if(!Q) return;
+  if(Q.view != null){ Q.view++; if(Q.view >= (Q.hist||[]).length) Q.view = null; showView(); return; }
+  if(Q.answered) nextQ();
+}
+function qBack(){
+  if(!Q || !(Q.hist||[]).length) return;
+  if(Q.view == null){ if(Q.mode === 'test' && !Q.lock) return; Q.view = Q.hist.length - 1; clearTimeout(Q.autoT); Q.autoOK = false; }   // 뒤로 보는 동안 자동 넘김 멈춤
+  else if(Q.view > 0) Q.view--;
+  else return;
+  showView();
+}
+function showView(){
+  const qa = document.getElementById('qArea'), qp = document.getElementById('qPast');
+  if(Q.view == null){
+    qp.style.display = 'none'; qp.innerHTML = ''; qa.style.display = '';
+    document.getElementById('qCount').textContent = (Q.i+1)+' / '+Q.qs.length;
+  } else {
+    const h = Q.hist[Q.view];
+    qp.innerHTML = `<div class="pastTag">◀ 지난 문제 ${h.n}번 다시 보기 · 앞으로 ▶ 누르면 돌아가요</div>` + h.html;
+    qp.querySelectorAll('[id]').forEach(e=>e.removeAttribute('id'));
+    qp.querySelectorAll('button').forEach(b=>{ if(!/^say\(/.test(b.getAttribute('onclick')||'')) b.style.pointerEvents = 'none'; });   // 다시 듣기만 눌림
+    qa.style.display = 'none'; qp.style.display = '';
+    document.getElementById('qCount').textContent = h.n+' / '+Q.qs.length;
+  }
+  drawNav();
 }
 
 /* 결과 저장 */
