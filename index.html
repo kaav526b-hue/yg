@@ -208,13 +208,13 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
   <h1>🍎 영공도전</h1>
   <div class="card">
     <b>이름을 입력하세요</b>
-    <p class="muted">이 폰에서 공부할 사람 이름이에요. 한 번만 하면 돼요.</p>
-    <input id="regName" maxlength="10" placeholder="예: 지우">
-    <button class="btn" onclick="doRegister()">시작하기</button>
+    <p class="muted">아빠가 등록해 준 이름을 넣어 주세요. 한 번만 하면 이 폰이 기억해요.</p>
+    <input id="regName" maxlength="10" placeholder="예: 지우" onkeydown="if(event.key==='Enter')doRegister()">
+    <button class="btn" onclick="doRegister()">들어가기</button>
     <p class="muted" id="regMsg"></p>
   </div>
   <div class="card" id="regList" style="display:none">
-    <b>이미 등록했다면 이름을 누르세요</b>
+    <b>🔧 관리자: 사람을 누르면 그 사람으로 들어가요</b>
     <div id="regUsers" style="margin-top:8px"></div>
   </div>
 </div>
@@ -443,7 +443,8 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
 <script>
 /***************************************************************
  * 영공도전_jw 앱 화면
- * VERSION 3.2   [v3.2] 아빠 화면: 진도 🟨학습 중·✅외움 두 색, '어제 ○/목표', 📅 날짜별 기록(누르면 그날 단어) — 서버 v2.9와 짝
+ * VERSION 3.3   [v3.3] 들어가기는 아빠가 등록한 이름으로만(다른 사람 바꾸기·사람 목록은 관리자만), 아빠 화면 ↕ 순서·➕ 새 사람, 날짜별 기록 한 줄(◀ ▶ 📅 달력) — 서버 v3.0과 짝
+ * VERSION 3.2  [v3.2] 아빠 화면: 진도 🟨학습 중·✅외움 두 색, '어제 ○/목표', 📅 날짜별 기록(누르면 그날 단어) — 서버 v2.9와 짝
  * VERSION 3.1  [v3.1] 아빠 화면에 📊 진도 칸(레벨마다 외움 막대·%·🏆, 지금 레벨 표시)
  * VERSION 3.0  [v3.0] 정답 칸(⭕/❌·다시 듣기·다음)을 문제 바로 아래로 올림, 남은 조각·다시/확인·모르겠어요 숨김
  * VERSION 2.9  [v2.9] 관리자 레벨 고르기에 💬 회화 1~3 추가 (서버 v2.8 회화 코스와 짝)
@@ -464,7 +465,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
  ***************************************************************/
 
 // ===================== 조절할 값 =====================
-const VERSION = '3.2';            // 앱 화면 버전 [v3.2]
+const VERSION = '3.3';            // 앱 화면 버전 [v3.3]
 const PCT_TOAST_MS = 1600;        // [v2.7] 답할 때 달성률 ▲▼ 보여 주는 시간(ms)
 const LONG_TEXT = 'Good morning, everyone. My name is Jiwoo, and I am learning English every day. After school, I like to read books and play soccer with my friends.';   // [v2.6] 점검 화면 긴 문장 (속도 확인용)
 const LOG_ON = true;              // [v2.3] 점검 기록(마이크·목소리·오류)을 서버 '점검기록' 시트로 보냄 (false면 끔)
@@ -931,24 +932,21 @@ async function showReg(){
   setTab(TITLE_KID, '🍎');   // [v2.1]
   go('reg');
   try{
-    const j = await api('users', {uid:''}, {quiet:true});
+    if(!ADMIN_PIN) return;   // [v3.3] 사람 목록은 관리자 모드에서만
+    const j = await api('users', {uid:'', pin:ADMIN_PIN}, {quiet:true});
     if(j.users.length){
       document.getElementById('regList').style.display = '';
       document.getElementById('regUsers').innerHTML = j.users.map(u=>`<button class="btn gray small" onclick="useUser('${jsq(u.uid)}')">👤 ${esc(u.name)}</button>`).join('');
     }
   }catch(e){}
 }
-async function doRegister(force){
+async function doRegister(){   // [v3.3] 등록된 이름으로만 들어가요 (새 사람은 아빠 화면에서)
   const name = document.getElementById('regName').value.trim();
   if(!name){ document.getElementById('regMsg').textContent = '이름을 넣어 주세요'; return; }
   try{
-    const j = await api('register', {uid:'', name, force: !!force});
-    if(j.exists){
-      modal(`<h2>"${esc(j.name)}"</h2><p>이미 있는 이름이에요.<br>이 이름으로 이어서 할까요?</p><div class="row"><button class="btn gray" onclick="closeModal()">다른 이름</button><button class="btn" onclick="closeModal();doRegister(true)">이어서 하기</button></div>`);
-      return;
-    }
+    const j = await api('register', {uid:'', name, pin:ADMIN_PIN||''});
     useUser(j.uid);
-  }catch(e){ document.getElementById('regMsg').textContent = e.message; }
+  }catch(e){ document.getElementById('regMsg').textContent = e.res && e.res.noName ? '이름을 다시 확인해 주세요' : e.message; }
 }
 function useUser(uid){ sset('yg_uid', uid); location.reload(); }
 function switchUser(){
@@ -996,24 +994,49 @@ function dadProgress(u){
       <div class="bar" style="height:8px;margin-top:3px;display:flex"><i style="width:${pct}%"></i><i style="width:${pi}%;background:#ffc93c"></i></div></div>`;
   }).join('') + '</div>';
 }
-/* [v3.2] 아빠 화면 📅 날짜별 기록: 하루 한 줄, 누르면 그날 단어(✅/❌) */
-let DAD_HIST_OPEN = {};
-function dadHistToggle(el, key){ DAD_HIST_OPEN[key] = el.open; }
+/* [v3.3] 아빠 화면 날짜별 기록: 한 줄 (◀ 날짜 ▶ 📅), 줄을 누르면 그날 단어(✅/❌), 📅는 달력 팝업 */
+let DAD_DAY = null, DAD_WORDS = {}, DAD_WOPEN = false, DAD_CAL = null;
+const WDN = ['일','월','화','수','목','금','토'];
+function dayDate(d){ const t = new Date(d*86400000); return {y:t.getUTCFullYear(), m:t.getUTCMonth()+1, dd:t.getUTCDate(), w:t.getUTCDay()}; }
+function dayLabel(d, today){ const x = dayDate(d); return (d===today?'오늘 ':d===today-1?'어제 ':'') + x.m+'/'+x.dd+' ('+WDN[x.w]+')'; }
 function dadYesterday(u){
-  const y = (u.hist || [])[1];
-  if(!y) return '';
-  return y.n ? ` · 어제 ${y.n}/${y.goal}문제${y.n>=y.goal?' ✅':''}` : ' · 어제 쉼';
+  const H = u.hist; if(!H || !H.days) return '';
+  const y = H.days[H.today-1];
+  return y ? ` · 어제 ${y.n}/${y.goal}문제${y.n>=y.goal?' ✅':''}` : ' · 어제 쉼';
 }
 function dadHistory(u){
-  const hs = u.hist;
-  if(!hs || !hs.length) return '';
-  return '<div style="margin:10px 0 4px;padding:10px 12px;background:#f6f8fb;border-radius:12px"><div style="font-weight:700;margin-bottom:6px">📅 날짜별 기록 <span class="muted" style="font-weight:400;font-size:12px">누르면 그날 단어</span></div>' + hs.map((h,i)=>{
-    const lab = i===0 ? '오늘' : i===1 ? '어제' : '';
-    if(!h.n && !h.min) return `<div class="muted" style="padding:4px 0;font-size:14px">${esc(h.date)} ${lab} — 쉼</div>`;
-    const key = u.uid+'_'+h.day, head = `<b>${esc(h.date)}</b> ${lab} · ${h.n}문제${h.n>=h.goal?' ✅':''} · 맞힘 ${h.ok} · 틀림 ${h.ng} · ${h.min}분${h.nl?' · 새로 외움 '+h.nl:''}`;
-    const ws = (h.words||[]).map(w=>`<div style="display:flex;justify-content:space-between;gap:6px;padding:2px 0"><span>${w.ng?'❌':'✅'} ${esc(w.en)} <span class="muted">${esc(w.ko)}</span></span><span class="muted">${w.ok?'맞힘 '+w.ok:''}${w.ok&&w.ng?' · ':''}${w.ng?'틀림 '+w.ng:''}</span></div>`).join('');
-    return `<details ${DAD_HIST_OPEN[key]?'open':''} ontoggle="dadHistToggle(this,'${jsq(key)}')" style="padding:4px 0;font-size:14px;border-bottom:1px solid #eef1f5"><summary style="cursor:pointer">${head}</summary><div style="padding:4px 0 4px 8px;font-size:13px">${ws || '<span class="muted">단어 기록 없음 (이번 업데이트 전 기록)</span>'}</div></details>`;
-  }).join('') + '</div>';
+  const H = u.hist; if(!H || !H.days) return '';
+  const d = DAD_DAY == null ? H.today : DAD_DAY, h = H.days[d];
+  const sum = h ? `${h.n}문제${h.n>=h.goal?' ✅':''} · 맞힘 ${h.ok} · 틀림 ${h.ng} · ${h.min}분${h.nl?' · 새로 외움 '+h.nl:''}` : '<span class="muted">쉼</span>';
+  const ws = DAD_WORDS[d];
+  const list = !DAD_WOPEN || !h ? '' : `<div style="padding:6px 2px 2px;font-size:13px">${ws ? (ws.length ? ws.map(w=>`<div style="display:flex;justify-content:space-between;gap:6px;padding:2px 0"><span>${w.ng?'❌':'✅'} ${esc(w.en)} <span class="muted">${esc(w.ko)}</span></span><span class="muted">${w.ok?'맞힘 '+w.ok:''}${w.ok&&w.ng?' · ':''}${w.ng?'틀림 '+w.ng:''}</span></div>`).join('') : '<span class="muted">단어 기록 없음</span>') : '<span class="muted">불러오는 중…</span>'}</div>`;
+  const arrow = (dir, on) => `<button class="chip" style="min-width:34px;${on?'':'opacity:.3'}" ${on?`onclick="dadDayGo(${dir})"`:''}>${dir<0?'◀':'▶'}</button>`;
+  return `<div style="margin:8px 0 4px;padding:8px 10px;background:#f6f8fb;border-radius:12px">
+    <div style="display:flex;align-items:center;gap:6px">${arrow(-1, true)}
+      <div style="flex:1;min-width:0;font-size:14px;cursor:${h?'pointer':'default'}" ${h?'onclick="dadWordsToggle()"':''}><b>${dayLabel(d, H.today)}</b> · ${sum}${h?` <span class="muted">${DAD_WOPEN?'▲':'▼'}</span>`:''}</div>
+      ${arrow(1, d < H.today)}<button class="chip" style="min-width:34px" onclick="dadCalOpen()">📅</button></div>${list}</div>`;
+}
+function dadDayGo(dir){ const H = DAD.user.hist; let d = (DAD_DAY == null ? H.today : DAD_DAY) + dir; if(d > H.today) d = H.today; DAD_DAY = d; if(DAD_WOPEN) dadWordsLoad(d); renderDad(DAD); }
+function dadWordsToggle(){ DAD_WOPEN = !DAD_WOPEN; const H = DAD.user.hist, d = DAD_DAY == null ? H.today : DAD_DAY; if(DAD_WOPEN) dadWordsLoad(d); renderDad(DAD); }
+async function dadWordsLoad(d){
+  const H = DAD.user.hist; if(!H.days[d]) return;
+  if(DAD_WORDS[d] && d !== H.today) return;
+  try{ const j = await api('dadDay', {pin:DAD_PIN, uid:DAD_UID, day:d}, {quiet:true}); DAD_WORDS[d] = j.words; renderDad(DAD); }catch(e){ DAD_WORDS[d] = []; renderDad(DAD); }
+}
+function dadCalOpen(){ const H = DAD.user.hist, x = dayDate(DAD_DAY == null ? H.today : DAD_DAY); DAD_CAL = {y:x.y, m:x.m}; dadCalDraw(); }
+function dadCalMove(n){ let m = DAD_CAL.m + n, y = DAD_CAL.y; if(m < 1){ m = 12; y--; } if(m > 12){ m = 1; y++; } DAD_CAL = {y, m}; dadCalDraw(); }
+function dadCalDraw(){
+  const H = DAD.user.hist, {y, m} = DAD_CAL, first = Math.floor(Date.UTC(y, m-1, 1)/86400000), last = Math.floor(Date.UTC(y, m, 1)/86400000) - 1;
+  const sel = DAD_DAY == null ? H.today : DAD_DAY;
+  let cells = WDN.map((w,i)=>`<div class="muted" style="font-size:12px;${i===0?'color:#e8453c':''}">${w}</div>`).join('');
+  for(let i = 0; i < dayDate(first).w; i++) cells += '<div></div>';
+  for(let d = first; d <= last; d++){
+    const h = H.days[d], fut = d > H.today, bg = h ? (h.n >= h.goal ? '#22b35e' : '#ffc93c') : 'transparent';
+    cells += `<div ${fut?'':`onclick="DAD_DAY=${d};closeModal();if(DAD_WOPEN)dadWordsLoad(${d});renderDad(DAD)"`} style="padding:7px 0;border-radius:10px;cursor:${fut?'default':'pointer'};background:${bg};${h?'color:#fff;font-weight:700;':''}${fut?'opacity:.3;':''}${d===sel?'outline:2px solid #e8453c;':''}">${dayDate(d).dd}</div>`;
+  }
+  modal(`<div style="display:flex;align-items:center;justify-content:space-between"><button class="chip" onclick="dadCalMove(-1)">◀</button><h2 style="margin:0">${y}년 ${m}월</h2><button class="chip" onclick="dadCalMove(1)">▶</button></div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;margin:10px 0">${cells}</div>
+    <p class="muted" style="font-size:12px">🟩 목표 달성 · 🟨 공부함 · 빈칸 = 쉼</p><button class="btn" onclick="closeModal()">닫기</button>`);
 }
 function myLevels(levels, courses){ return levels.filter(l=>(courses || ST.courses || ['daily']).indexOf(l.course || 'daily') >= 0); }
 
@@ -1064,7 +1087,7 @@ function openSettings(){
     <div class="row" style="flex-wrap:wrap">${ST.goalChoices.map(g=>`<button class="btn small ${g===ST.goal?'':'gray'}" style="flex:0 0 30%" onclick="setGoal(${g})">${g}</button>`).join('')}</div>
     <p class="muted">공부 모드</p>
     <div class="row" style="flex-wrap:wrap">${Object.keys(ST.modes||{}).map(m=>`<button class="btn small ${m===ST.mode?'':'gray'}" style="flex:1 1 30%" onclick="setMode('${m}')">${esc(ST.modes[m])}</button>`).join('')}</div>
-    <button class="btn gray small" onclick="switchUser()">👥 다른 사람으로 바꾸기</button>
+    ${ADMIN_PIN?'<button class="btn gray small" onclick="switchUser()">👥 다른 사람으로 바꾸기 (관리자)</button>':''}
     <button class="btn gray small" onclick="closeModal();openCheck()">🩺 점검 (소리·마이크 문제 찾기)</button>
     <button class="btn" onclick="closeModal()">닫기</button>
     <p class="muted">앱 v${VERSION}</p>`);
@@ -1907,7 +1930,21 @@ async function dadCall(action, data){
   catch(e){ toast(e.message); }
 }
 async function dadRefresh(){ if(document.hidden || modalOpen()) return; try{ renderDad(await api('dad', {pin:DAD_PIN, uid:DAD_UID}, {quiet:true})); }catch(e){} }
-function dadPick(uid){ DAD_UID = uid; sset('yg_dad_uid', uid); dadCall('dad'); }
+function dadPick(uid){ DAD_UID = uid; sset('yg_dad_uid', uid); DAD_DAY = null; DAD_WORDS = {}; dadCall('dad'); }
+/* [v3.3] 사용자 순서 바꾸기 · 새 사람 등록 */
+let DAD_ORDER = null;
+function dadMove(i, d){ const j = i + d; if(j < 0 || j >= DAD_ORDER.length) return; [DAD_ORDER[i], DAD_ORDER[j]] = [DAD_ORDER[j], DAD_ORDER[i]]; renderDad(DAD); }
+function dadOrderDone(){ const o = DAD_ORDER; DAD_ORDER = null; dadCall('dadOrder', {order:o}).then(j=>{ if(j) toast('순서를 저장했어요'); }); }
+function dadAddUser(){
+  modal(`<h2>➕ 새 사람</h2><p class="muted">이름을 등록하면, 그 사람이 앱 링크를 열고 이 이름을 넣어 들어가요.</p><input id="newUserName" maxlength="10" placeholder="예: 지우"><div class="row"><button class="btn gray" onclick="closeModal()">취소</button><button class="btn" onclick="dadAddUserGo()">등록</button></div>`);
+  setTimeout(()=>{ const e = document.getElementById('newUserName'); if(e) e.focus(); }, 100);
+}
+function dadAddUserGo(){
+  const name = (document.getElementById('newUserName').value||'').trim();
+  if(!name){ toast('이름을 넣어 주세요'); return; }
+  closeModal();
+  dadCall('dadAddUser', {name}).then(j=>{ if(j && j.user){ DAD_UID = j.user.uid; sset('yg_dad_uid', DAD_UID); toast('"'+name+'" 등록했어요'); } });
+}
 function renderDad(j){
   DAD = j;
   // 줄 차례인 보상 + 새로 생긴 건 확인창으로
@@ -1921,9 +1958,14 @@ function renderDad(j){
     modal(`<div style="font-size:56px">🎉</div><h2>보상이 열렸어요!</h2>${fresh.map(p=>`<div class="prize"><div class="p">🎁 ${esc(p.prize)}</div><b>${esc(p.name)}</b> · ${esc(p.kind)}</div>`).join('')}<p class="muted">주고 나서 [지급 완료]를 눌러 주세요.</p><button class="btn" onclick="closeModal()">확인</button>`);
   }
   // 사용자 목록
-  document.getElementById('dadUsers').innerHTML = j.users.map(u=>
-    `<button class="${j.user && j.user.uid===u.uid?'on':''}" onclick="dadPick('${jsq(u.uid)}')"><span class="dot ${u.studying?'live':''}"></span>${esc(u.name)} · ${esc(u.levelName||'Lv'+u.level)}</button>`).join('');
-  document.getElementById('dadNoUser').textContent = j.users.length ? '' : '아직 등록한 사람이 없어요. 아래 앱 링크를 보내 주세요.';
+  // [v3.3] 순서 바꾸기 모드면 ◀ ▶ 화살표, 끝에 ↕ 순서 · ➕ 새 사람
+  const ord = DAD_ORDER ? DAD_ORDER.map(id=>j.users.find(u=>u.uid===id)).filter(Boolean) : j.users;
+  document.getElementById('dadUsers').innerHTML = DAD_ORDER
+    ? ord.map((u,i)=>`<button class="on" style="gap:4px"><span onclick="dadMove(${i},-1)" style="padding:0 6px">◀</span>${esc(u.name)}<span onclick="dadMove(${i},1)" style="padding:0 6px">▶</span></button>`).join('') + `<button onclick="dadOrderDone()">✅ 완료</button><button onclick="DAD_ORDER=null;renderDad(DAD)">취소</button>`
+    : j.users.map(u=>
+    `<button class="${j.user && j.user.uid===u.uid?'on':''}" onclick="dadPick('${jsq(u.uid)}')"><span class="dot ${u.studying?'live':''}"></span>${esc(u.name)} · ${esc(u.levelName||'Lv'+u.level)}</button>`).join('')
+      + `<button onclick="DAD_ORDER=DAD.users.map(u=>u.uid);renderDad(DAD)">↕ 순서</button><button onclick="dadAddUser()">➕ 새 사람</button>`;
+  document.getElementById('dadNoUser').textContent = j.users.length ? '' : '아직 등록한 사람이 없어요. ➕ 새 사람으로 이름을 등록하고 앱 링크를 보내 주세요.';
   document.getElementById('dadUserBody').style.display = j.user ? '' : 'none';
   document.getElementById('adminToggle').textContent = ADMIN_PIN ? '🔧 이 폰 관리자 모드 끄기' : '🔧 이 폰에서 관리자 모드 켜기';
   if(!j.user) return;
@@ -1931,8 +1973,8 @@ function renderDad(j){
   document.getElementById('dadStatus').innerHTML =
     `<div style="font-size:18px;font-weight:700"><span class="dot ${u.studying?'live':''}"></span>${esc(u.name)} ${u.studying?'지금 공부 중! ('+u.sessionMin+'분째)':'지금은 쉬는 중'}</div>
      <p class="muted">${esc(u.levelName||'레벨 '+u.level)} · 오늘 ${u.todayDone}/${u.goal}문제 · 오늘 ${u.todayMin}분 · 전체 ${u.totalMin}분 · 🔥 ${u.streak}일${dadYesterday(u)} ${u.diagDone?'':'· 진단 전'}</p>
-     ${dadProgress(u)}
      ${dadHistory(u)}
+     ${dadProgress(u)}
      <p class="muted" style="margin:6px 0 2px">공부 모드</p>
      <div class="row" style="flex-wrap:wrap" id="dadModes">${Object.keys(j.modes||{}).map(m=>`<button class="btn small ${m===u.mode?'':'gray'}" style="flex:1 1 30%" onclick="dadCall('dadSetMode',{mode:'${m}'})">${esc(j.modes[m])}</button>`).join('')}</div>`;   // [v2.4]
   // 그림판 설정 (입력 중이면 새로고침으로 지우지 않기)
