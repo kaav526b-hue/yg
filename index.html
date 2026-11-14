@@ -458,6 +458,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
 <script>
 /***************************************************************
  * 영공도전_jw 앱 화면
+ * VERSION 4.7   [v4.7] 아빠가 [지급 완료]를 누른 선물이 새로 있으면 아이가 앱을 켤 때 '🎁 아빠가 선물을 줬어요!' 창 한 번
  * VERSION 4.6   [v4.6] 관리자창 '📱 이 폰의 사용자'(이 폰이 누구로 들어가는지 + 👥 사람 바꾸기), 시험 끝 뒤 '이 폰은 ○○로 들어가요' 안내
  * VERSION 4.5   [v4.5] 조각을 다 열면 레벨 테스트 칸이 맨 위로, 선물은 '레벨 테스트 통과하면 받아요' 안내 → 통과 때 '🎁 선물 지급' — 서버 v3.8과 짝
  * VERSION 4.4   [v4.4] 🧪 시험 중 막대에 '📝 단계 시험'(안 연 맨 앞 단계)·'📝 레벨 테스트' 바로 보기 — 서버 v3.7과 짝
@@ -496,7 +497,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
  ***************************************************************/
 
 // ===================== 조절할 값 =====================
-const VERSION = '4.6';            // 앱 화면 버전 [v4.6]
+const VERSION = '4.7';            // 앱 화면 버전 [v4.7]
 const PCT_TOAST_MS = 1600;        // [v2.7] 답할 때 달성률 ▲▼ 보여 주는 시간(ms)
 const LONG_TEXT = 'Good morning, everyone. My name is Jiwoo, and I am learning English every day. After school, I like to read books and play soccer with my friends.';   // [v2.6] 점검 화면 긴 문장 (속도 확인용)
 const LOG_ON = true;              // [v2.3] 점검 기록(마이크·목소리·오류)을 서버 '점검기록' 시트로 보냄 (false면 끔)
@@ -1008,6 +1009,29 @@ async function skipDiag(){
  * ============================================================= */
 function enterMain(){ go('main'); renderAdminBar(); showTab(sget('yg_tab') || 'tabStudy'); refreshSpeedUI();
   if(sget('yg_whonote') === '1'){ sset('yg_whonote', ''); setTimeout(()=>toast('📱 이 폰은 '+ST.name+'(으)로 들어가요'), 600); }   // [v4.6] 시험 끝 뒤 안내
+  if(!enterMain.giftChecked){ enterMain.giftChecked = true; setTimeout(checkPaidGifts, 1200); }   // [v4.7]
+}
+/* [v4.7] 아빠가 [지급 완료]를 누른 선물이 새로 있으면 앱을 켤 때 한 번 축하 창 */
+async function checkPaidGifts(){
+  try{
+    if(!UID || modalOpen()) return;
+    const j = await api('prizes', {}, {quiet:true});
+    const key = 'yg_paid_seen_' + UID, idOf = p => String(p.no != null ? p.no : (p.date+'|'+p.prize));
+    const paid = (j.prizes||[]).filter(p=>p.status==='지급 완료');
+    const raw = sget(key);
+    let seen = [];
+    if(raw === null || raw === undefined || raw === ''){   // 처음 켤 때: 오늘 전에 받은 예전 선물은 조용히 기억만 (오늘 받은 건 축하)
+      const d = new Date(), today = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+      seen = paid.filter(p=>String(p.paid||'').slice(0,10) !== today).map(idOf);
+      sset(key, JSON.stringify(seen));
+    } else { try{ seen = JSON.parse(raw) || []; }catch(e){} }
+    const fresh = paid.filter(p=>seen.indexOf(idOf(p)) < 0);
+    if(!fresh.length) return;
+    sset(key, JSON.stringify(seen.concat(fresh.map(idOf)).slice(-200)));
+    confetti();
+    modal(`<div style="font-size:60px">🎁</div><h2>아빠가 선물을 줬어요!</h2>${fresh.map(p=>`<div class="prize paid"><div class="p">🎁 ${esc(p.prize)}</div><b>${esc(p.kind)}</b></div>`).join('')}
+      <p class="muted">공부 열심히 한 선물이에요. 아빠한테 고맙다고 말해 볼까요? 😊</p><button class="btn" onclick="closeModal()">고마워요 아빠!</button>`);
+  }catch(e){}
 }
 function showTab(t){
   sset('yg_tab', t);
