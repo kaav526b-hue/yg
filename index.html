@@ -458,6 +458,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
 <script>
 /***************************************************************
  * 영공도전_jw 앱 화면
+ * VERSION 4.8   [v4.8] 서버 주소를 앱에 미리 넣어 둠: 사이트 주소로 그냥 열어도 주소 칸 없이 바로 이름 넣는 화면
  * VERSION 4.7   [v4.7] 아빠가 [지급 완료]를 누른 선물이 새로 있으면 아이가 앱을 켤 때 '🎁 아빠가 선물을 줬어요!' 창 한 번
  * VERSION 4.6   [v4.6] 관리자창 '📱 이 폰의 사용자'(이 폰이 누구로 들어가는지 + 👥 사람 바꾸기), 시험 끝 뒤 '이 폰은 ○○로 들어가요' 안내
  * VERSION 4.5   [v4.5] 조각을 다 열면 레벨 테스트 칸이 맨 위로, 선물은 '레벨 테스트 통과하면 받아요' 안내 → 통과 때 '🎁 선물 지급' — 서버 v3.8과 짝
@@ -497,7 +498,8 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
  ***************************************************************/
 
 // ===================== 조절할 값 =====================
-const VERSION = '4.7';            // 앱 화면 버전 [v4.7]
+const VERSION = '4.8';            // 앱 화면 버전 [v4.8]
+const DEFAULT_SERVER = 'https://script.google.com/macros/s/AKfycbyxg6fj8Jv96bb2H18uXwQ4v12fnr1goDyoLRfg_bB2gFw_qN2WpFXqlNapBOXzZVse3w/exec';   // [v4.8] 기본 서버 주소 (폰에 저장된 주소가 없으면 이걸 씀)
 const PCT_TOAST_MS = 1600;        // [v2.7] 답할 때 달성률 ▲▼ 보여 주는 시간(ms)
 const LONG_TEXT = 'Good morning, everyone. My name is Jiwoo, and I am learning English every day. After school, I like to read books and play soccer with my friends.';   // [v2.6] 점검 화면 긴 문장 (속도 확인용)
 const LOG_ON = true;              // [v2.3] 점검 기록(마이크·목소리·오류)을 서버 '점검기록' 시트로 보냄 (false면 끔)
@@ -929,7 +931,7 @@ function readHash(){
 }
 async function boot(){
   const isDad = readHash();
-  SERVER = sget('yg_server');
+  SERVER = sget('yg_server') || DEFAULT_SERVER;   // [v4.8] 주소 칸 없이 바로 들어가요
   ADMIN_PIN = sget('yg_admin');
   TESTING = sget('yg_test') === '1' && sget('yg_uid') === TEST_UID;   // [v3.9] 시험 사람으로 들어왔을 때만
   if(!TESTING && ADMIN_PIN){ ADMIN_PIN = ''; sset('yg_admin', ''); sset('yg_test', ''); }   // [v3.9] 예전 점검 모드는 저절로 꺼짐
