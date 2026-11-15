@@ -240,7 +240,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
   <div id="adminBar">
     <div class="row" style="justify-content:space-between"><b style="flex:0 0 auto">🧪 시험 중</b><span class="muted" style="color:#cbb8ff;flex:0 0 auto" id="abWho"></span><button style="flex:0 0 auto" onclick="toggleAdminBar()">접기</button><button style="flex:0 0 auto;background:#ffb020;color:#222" onclick="testExit()">시험 끝</button></div><!-- [v3.9] -->
     <div class="ab" id="abBody">
-      <select id="abLevel"><option value="1">레벨 1</option><option value="2">레벨 2</option><option value="3">레벨 3</option><option value="4">레벨 4</option><option value="5">레벨 5</option><option value="6">토익 1</option><option value="7">토익 2</option><option value="8">토익 3</option><option value="9">회화 1</option><option value="10">회화 2</option><option value="11">회화 3</option></select><!-- [v2.9] -->
+      <select id="abLevel"><option value="1">레벨 1</option><option value="2">레벨 2</option><option value="3">레벨 3</option><option value="4">레벨 4</option><option value="5">레벨 5</option><option value="6">토익 1</option><option value="7">토익 2</option><option value="8">토익 3</option><option value="9">회화 1</option><option value="10">회화 2</option><option value="11">회화 3</option><option value="12">문장 1</option><option value="13">문장 2</option><option value="14">문장 3</option></select><!-- [v2.9] [v4.9] -->
       <button onclick="adminOp('level')">레벨 이동</button>
       <button onclick="adminOp('stage')">단계 넘김</button>
       <button onclick="testStageNow()">📝 단계 시험</button><!-- [v4.4] -->
@@ -458,6 +458,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
 <script>
 /***************************************************************
  * 영공도전_jw 앱 화면
+ * VERSION 4.9   [v4.9] 🧱 문장 만들기 코스(문장 1~3 = 레벨 12~14): 늘린 문장 문제에 '앞 문장 + ➕ 붙일 말' 칸, 💡 이럴 때 써요 144개, 관리자 레벨 고르기에 문장 1~3 — 서버 v3.9와 짝
  * VERSION 4.8   [v4.8] 서버 주소를 앱에 미리 넣어 둠: 사이트 주소로 그냥 열어도 주소 칸 없이 바로 이름 넣는 화면
  * VERSION 4.7   [v4.7] 아빠가 [지급 완료]를 누른 선물이 새로 있으면 아이가 앱을 켤 때 '🎁 아빠가 선물을 줬어요!' 창 한 번
  * VERSION 4.6   [v4.6] 관리자창 '📱 이 폰의 사용자'(이 폰이 누구로 들어가는지 + 👥 사람 바꾸기), 시험 끝 뒤 '이 폰은 ○○로 들어가요' 안내
@@ -498,7 +499,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
  ***************************************************************/
 
 // ===================== 조절할 값 =====================
-const VERSION = '4.8';            // 앱 화면 버전 [v4.8]
+const VERSION = '4.9';            // 앱 화면 버전 [v4.9]
 const DEFAULT_SERVER = 'https://script.google.com/macros/s/AKfycbyxg6fj8Jv96bb2H18uXwQ4v12fnr1goDyoLRfg_bB2gFw_qN2WpFXqlNapBOXzZVse3w/exec';   // [v4.8] 기본 서버 주소 (폰에 저장된 주소가 없으면 이걸 씀)
 const PCT_TOAST_MS = 1600;        // [v2.7] 답할 때 달성률 ▲▼ 보여 주는 시간(ms)
 const LONG_TEXT = 'Good morning, everyone. My name is Jiwoo, and I am learning English every day. After school, I like to read books and play soccer with my friends.';   // [v2.6] 점검 화면 긴 문장 (속도 확인용)
@@ -532,7 +533,7 @@ const SPEED_DEFAULT = 2;           // [v2.5] 처음 속도 단계 (2 = 보통)
 const GAME_WRONG_WEIGHT = 2;       // [v2.5] 오늘 틀린 단어가 게임에 나오는 배수 (2 = 두 배 자주)
 const TEASER_MIN_SEC = 90;        // 이벤트 예약 중 티저 문구 간격 — 최소(초)
 const TEASER_MAX_SEC = 220;       // 티저 문구 간격 — 최대(초)
-const ARR_STRICT_FROM_LV = 3;     // [v4.0] 이 레벨부터(토익 6~8·회화 9~11 포함) 문장 배열 힌트 없음: 하나만 놓아도 확인, '필요 없는 조각' 안내 없음
+const ARR_STRICT_FROM_LV = 3;     // [v4.0] 이 레벨부터(토익 6~8·회화 9~11·문장 12~14 포함) 문장 배열 힌트 없음: 하나만 놓아도 확인, '필요 없는 조각' 안내 없음
 const TEST_UID = 'utest';      // [v3.9] 🧪 시험 사람 번호 — 바꾸지 마세요 (서버 TEST_UID와 같아야 해요)
 const DAD_BOARD_SMALL_PX = 220; // [v3.8] 관리자창 '그림판 상품 정하기' 칸의 레벨별 작은 그림판 너비(px)
 const DAD_REFRESH_SEC = 15;      // ([v3.7]부터 안 씀) 관리자창 자동 새로고침 — 이제 들어올 때만 새로 받아요
@@ -1259,6 +1260,11 @@ function nextQ(){
   if(Q.mode==='test') startTimer();
   drawNav();   // [v3.6]
 }
+/* [v4.9] 🧱 늘린 문장 문제: 앞 문장 + ➕ 붙일 말 칸 (무슨 낱말을 붙이는지 알려 줘요) */
+function addLine(q){
+  if(!q || !q.addEn) return '';
+  return `<div style="margin:8px auto;padding:8px 12px;border-radius:12px;background:#00000022;display:inline-block;text-align:left"><div class="muted">앞 문장: <b>${esc(q.base||'')}</b></div><div style="margin-top:2px">➕ <b>${esc(q.addKo||'')}</b> (${esc(q.addEn)})</div></div>`;
+}
 function promptHTML(q, type){
   const big = (t)=>`<div class="qbig">${esc(t)}</div>`;
   const sayBtn = `<button class="qsay" onclick="qSay()">🔊</button>`;
@@ -1266,9 +1272,9 @@ function promptHTML(q, type){
   if(type==='sound') return `<div class="qkind">듣고 맞는 철자를 고르세요</div>${sayBtn}`;
   if(type==='pic') return `<div class="qkind">그림을 보고 맞는 철자를 고르세요</div><div class="qemo">${q.emo||'🍎'}</div><div class="muted">${esc(q.ko)}</div>${sayBtn}`;
   if(type==='blank') return `<div class="qkind">빈칸에 들어갈 단어는?</div><div class="qmid">${esc(q.text).replace('____','<span class="blank">____</span>')}</div><div class="muted">${esc(q.exKo)}</div>`;
-  if(type==='meaning') return `<div class="qkind">뜻이 뭘까요?</div>${big(q.en)}${ipaBox}${sayBtn}`;   // [v2.2] 그림 힌트 뺌 [v2.6] 발음 기호
+  if(type==='meaning') return `<div class="qkind">뜻이 뭘까요?</div>${big(q.en)}${addLine(q)}${ipaBox}${sayBtn}`;   // [v2.2] 그림 힌트 뺌 [v2.6] 발음 기호 [v4.9] 붙일 말 칸
   if(type==='listen') return `<div class="qkind">듣고 뜻을 고르세요</div>${sayBtn}`;
-  if(type==='ko2en') return `<div class="qkind">영어로 뭘까요?</div>${big(q.ko)}`;   // [v2.2] 그림 힌트 뺌
+  if(type==='ko2en') return `<div class="qkind">영어로 뭘까요?</div>${big(q.ko)}${addLine(q)}`;   // [v2.2] 그림 힌트 뺌 [v4.9] 붙일 말 칸
   return big(q.en);
 }
 /* [v2.6] 🔊 누르면 읽고, 단어가 보이는 문제면 발음 기호도 보여 줘요 */
@@ -1374,7 +1380,7 @@ function feedback(q, ok, dunnoFlag){
   const pinBtn = (!isG && /^w/.test(q.id)) ? `<button onclick="togglePin('${jsq(q.id)}', this)">${isPinned(q.id)?'📌 내 단어장에서 빼기':'📌 내 단어장에 넣기'}</button>` : '';   // [v2.7]
   const replay = `<div class="replay">${isG?'':`<button onclick="say('${jsq(q.en)}')">🔁 단어 다시 듣기</button>`}${sent?`<button onclick="say('${jsq(sent)}')">🔁 문장 다시 듣기</button>`:''}${pinBtn}</div>`;
   const extra = isG ? `<div class="qmid" style="font-size:17px">${esc(q.en)}</div><div class="muted">${esc(q.note)}</div>${replay}`
-    : `<div>${q.emo?`<span style="font-size:26px">${q.emo}</span> `:''}<b style="font-size:18px">${esc(q.en)}</b> ${q.ipa?`<span class="ipa" style="display:inline">[${esc(q.ipa)}]</span>`:''} · ${esc(q.ko)}</div>${q.ex?`<div class="muted" style="margin-top:4px">${esc(q.ex)}<br>${esc(q.exKo)}</div>`:''}${replay}`;
+    : `<div>${q.emo?`<span style="font-size:26px">${q.emo}</span> `:''}<b style="font-size:18px">${esc(q.en)}</b> ${q.ipa?`<span class="ipa" style="display:inline">[${esc(q.ipa)}]</span>`:''} · ${esc(q.ko)}</div>${q.ex?`<div class="muted" style="margin-top:4px">${esc(q.ex)}<br>${esc(q.exKo)}</div>`:''}${addLine(q)}${replay}`;   // [v4.9]
   const fb = document.getElementById('fbArea');
   if(ok){
     fb.innerHTML = `<div class="fb good"><b style="color:var(--ok)">⭕ 정답!</b>${isG?extra:''}</div>`;
@@ -1558,7 +1564,152 @@ function spellDiffHTML(c){
   "Do not give up.": "힘들어서 그만두려는 친구에게",
   "Good luck on your test.": "시험 보러 가는 친구를 응원할 때",
   "You look great today.": "친구의 옷차림·모습을 칭찬할 때",
-  "Keep up the good work.": "잘하고 있는 사람을 계속 격려할 때"
+  "Keep up the good work.": "잘하고 있는 사람을 계속 격려할 때",
+  /* [v4.9] 🧱 문장 만들기 (문장 1~3) 이럴 때 써요 */
+  "I go to work.": "늘 하는 일이나 지금의 일을 말할 때 (현재)",
+  "I went to work.": "이미 끝난 일을 말할 때 (과거, go → went)",
+  "I will go to work.": "지금 마음먹은 일을 말할 때 (will + 동사)",
+  "I am going to go to work.": "미리 정한 계획을 말할 때 (be going to + 동사)",
+  "I go to work every day.": "'every day' = 매일. 현재 문장에 붙이면 반복되는 습관이 돼요",
+  "I went to work yesterday.": "'yesterday' = 어제. 과거 문장에 붙여 지난 때를 알려 줘요",
+  "I will go to work tomorrow.": "'tomorrow' = 내일. will 문장에 붙여 앞으로 할 때를 알려 줘요",
+  "I am going to go to work next week.": "'next week' = 다음 주에. be going to 문장에 붙여 계획한 때를 알려 줘요",
+  "I eat lunch.": "늘 하는 일이나 지금의 일을 말할 때 (현재)",
+  "I ate lunch.": "이미 끝난 일을 말할 때 (과거, eat → ate)",
+  "I will eat lunch.": "지금 마음먹은 일을 말할 때 (will + 동사)",
+  "I am going to eat lunch.": "미리 정한 계획을 말할 때 (be going to + 동사)",
+  "I eat lunch at noon.": "'at noon' = 낮 12시에. 현재 문장에 붙이면 반복되는 습관이 돼요",
+  "I ate lunch an hour ago.": "'an hour ago' = 한 시간 전에. 과거 문장에 붙여 지난 때를 알려 줘요",
+  "I will eat lunch later.": "'later' = 이따가. will 문장에 붙여 앞으로 할 때를 알려 줘요",
+  "I am going to eat lunch tomorrow.": "'tomorrow' = 내일. be going to 문장에 붙여 계획한 때를 알려 줘요",
+  "I go to bed.": "늘 하는 일이나 지금의 일을 말할 때 (현재)",
+  "I went to bed.": "이미 끝난 일을 말할 때 (과거, go → went)",
+  "I will go to bed.": "지금 마음먹은 일을 말할 때 (will + 동사)",
+  "I am going to go to bed.": "미리 정한 계획을 말할 때 (be going to + 동사)",
+  "I go to bed at ten.": "'at ten' = 10시에. 현재 문장에 붙이면 반복되는 습관이 돼요",
+  "I went to bed at midnight.": "'at midnight' = 자정에. 과거 문장에 붙여 지난 때를 알려 줘요",
+  "I will go to bed soon.": "'soon' = 곧. will 문장에 붙여 앞으로 할 때를 알려 줘요",
+  "I am going to go to bed tonight.": "'tonight' = 오늘 밤에. be going to 문장에 붙여 계획한 때를 알려 줘요",
+  "I exercise.": "늘 하는 일이나 지금의 일을 말할 때 (현재)",
+  "I exercised.": "이미 끝난 일을 말할 때 (과거, exercise → exercised)",
+  "I will exercise.": "지금 마음먹은 일을 말할 때 (will + 동사)",
+  "I am going to exercise.": "미리 정한 계획을 말할 때 (be going to + 동사)",
+  "I exercise every morning.": "'every morning' = 매일 아침. 현재 문장에 붙이면 반복되는 습관이 돼요",
+  "I exercised last night.": "'last night' = 어젯밤에. 과거 문장에 붙여 지난 때를 알려 줘요",
+  "I will exercise after work.": "'after work' = 퇴근 후에. will 문장에 붙여 앞으로 할 때를 알려 줘요",
+  "I am going to exercise this weekend.": "'this weekend' = 이번 주말에. be going to 문장에 붙여 계획한 때를 알려 줘요",
+  "I study English.": "늘 하는 일이나 지금의 일을 말할 때 (현재)",
+  "I studied English.": "이미 끝난 일을 말할 때 (과거, study → studied)",
+  "I will study English.": "지금 마음먹은 일을 말할 때 (will + 동사)",
+  "I am going to study English.": "미리 정한 계획을 말할 때 (be going to + 동사)",
+  "I study English every evening.": "'every evening' = 매일 저녁. 현재 문장에 붙이면 반복되는 습관이 돼요",
+  "I studied English this morning.": "'this morning' = 오늘 아침에. 과거 문장에 붙여 지난 때를 알려 줘요",
+  "I will study English tonight.": "'tonight' = 오늘 밤에. will 문장에 붙여 앞으로 할 때를 알려 줘요",
+  "I am going to study English on Sunday.": "'on Sunday' = 일요일에. be going to 문장에 붙여 계획한 때를 알려 줘요",
+  "I buy groceries.": "늘 하는 일이나 지금의 일을 말할 때 (현재)",
+  "I bought groceries.": "이미 끝난 일을 말할 때 (과거, buy → bought)",
+  "I will buy groceries.": "지금 마음먹은 일을 말할 때 (will + 동사)",
+  "I am going to buy groceries.": "미리 정한 계획을 말할 때 (be going to + 동사)",
+  "I buy groceries every Saturday.": "'every Saturday' = 매주 토요일에. 현재 문장에 붙이면 반복되는 습관이 돼요",
+  "I bought groceries two days ago.": "'two days ago' = 이틀 전에. 과거 문장에 붙여 지난 때를 알려 줘요",
+  "I will buy groceries on Friday.": "'on Friday' = 금요일에. will 문장에 붙여 앞으로 할 때를 알려 줘요",
+  "I am going to buy groceries tomorrow evening.": "'tomorrow evening' = 내일 저녁에. be going to 문장에 붙여 계획한 때를 알려 줘요",
+  "I am doing my homework.": "지금 하는 중인 일 (am + ~ing)",
+  "I was doing my homework.": "그때 하고 있던 일 (was + ~ing)",
+  "I have done my homework.": "이미 끝낸 일, 지금도 남은 결과 (have + 과거분사, do → did → done)",
+  "I have not done my homework yet.": "아직 안 한 일 (have not + 과거분사 + yet)",
+  "I am doing my homework at home.": "'at home' = 집에서. 어디서 하는지 문장 끝에 붙여요",
+  "I am doing my homework at home with my sister.": "'with my sister' = 동생과 함께. 누구와 하는지 장소 뒤에 붙여요",
+  "I have done my homework at the library.": "'at the library' = 도서관에서. 어디서 하는지 문장 끝에 붙여요",
+  "I have done my homework at the library with Mina.": "'with Mina' = 미나와 함께. 누구와 하는지 장소 뒤에 붙여요",
+  "I am cooking dinner.": "지금 하는 중인 일 (am + ~ing)",
+  "I was cooking dinner.": "그때 하고 있던 일 (was + ~ing)",
+  "I have cooked dinner.": "이미 끝낸 일, 지금도 남은 결과 (have + 과거분사, cook → cooked → cooked)",
+  "I have not cooked dinner yet.": "아직 안 한 일 (have not + 과거분사 + yet)",
+  "I am cooking dinner in the kitchen.": "'in the kitchen' = 부엌에서. 어디서 하는지 문장 끝에 붙여요",
+  "I am cooking dinner in the kitchen with my dad.": "'with my dad' = 아빠와 함께. 누구와 하는지 장소 뒤에 붙여요",
+  "I have cooked dinner at my grandma's house.": "'at my grandma's house' = 할머니 집에서. 어디서 하는지 문장 끝에 붙여요",
+  "I have cooked dinner at my grandma's house with my cousin.": "'with my cousin' = 사촌과 함께. 누구와 하는지 장소 뒤에 붙여요",
+  "I am watching a movie.": "지금 하는 중인 일 (am + ~ing)",
+  "I was watching a movie.": "그때 하고 있던 일 (was + ~ing)",
+  "I have watched a movie.": "이미 끝낸 일, 지금도 남은 결과 (have + 과거분사, watch → watched → watched)",
+  "I have not watched a movie yet.": "아직 안 한 일 (have not + 과거분사 + yet)",
+  "I am watching a movie at the cinema.": "'at the cinema' = 영화관에서. 어디서 하는지 문장 끝에 붙여요",
+  "I am watching a movie at the cinema with my friends.": "'with my friends' = 친구들과 함께. 누구와 하는지 장소 뒤에 붙여요",
+  "I have watched a movie at home.": "'at home' = 집에서. 어디서 하는지 문장 끝에 붙여요",
+  "I have watched a movie at home with my family.": "'with my family' = 가족과 함께. 누구와 하는지 장소 뒤에 붙여요",
+  "I am doing the laundry.": "지금 하는 중인 일 (am + ~ing)",
+  "I was doing the laundry.": "그때 하고 있던 일 (was + ~ing)",
+  "I have done the laundry.": "이미 끝낸 일, 지금도 남은 결과 (have + 과거분사, do → did → done)",
+  "I have not done the laundry yet.": "아직 안 한 일 (have not + 과거분사 + yet)",
+  "I am doing the laundry at the laundromat.": "'at the laundromat' = 빨래방에서. 어디서 하는지 문장 끝에 붙여요",
+  "I am doing the laundry at the laundromat with my brother.": "'with my brother' = 남동생과 함께. 누구와 하는지 장소 뒤에 붙여요",
+  "I have done the laundry at my friend's house.": "'at my friend's house' = 친구 집에서. 어디서 하는지 문장 끝에 붙여요",
+  "I have done the laundry at my friend's house with my mom.": "'with my mom' = 엄마와 함께. 누구와 하는지 장소 뒤에 붙여요",
+  "I am taking a walk.": "지금 하는 중인 일 (am + ~ing)",
+  "I was taking a walk.": "그때 하고 있던 일 (was + ~ing)",
+  "I have taken a walk.": "이미 끝낸 일, 지금도 남은 결과 (have + 과거분사, take → took → taken)",
+  "I have not taken a walk yet.": "아직 안 한 일 (have not + 과거분사 + yet)",
+  "I am taking a walk in the park.": "'in the park' = 공원에서. 어디서 하는지 문장 끝에 붙여요",
+  "I am taking a walk in the park with my dog.": "'with my dog' = 강아지와 함께. 누구와 하는지 장소 뒤에 붙여요",
+  "I have taken a walk by the river.": "'by the river' = 강가에서. 어디서 하는지 문장 끝에 붙여요",
+  "I have taken a walk by the river with my neighbor.": "'with my neighbor' = 이웃과 함께. 누구와 하는지 장소 뒤에 붙여요",
+  "I am calling my mom.": "지금 하는 중인 일 (am + ~ing)",
+  "I was calling my mom.": "그때 하고 있던 일 (was + ~ing)",
+  "I have called my mom.": "이미 끝낸 일, 지금도 남은 결과 (have + 과거분사, call → called → called)",
+  "I have not called my mom yet.": "아직 안 한 일 (have not + 과거분사 + yet)",
+  "I am calling my mom from school.": "'from school' = 학교에서. 어디서 하는지 문장 끝에 붙여요",
+  "I am calling my mom from school with my friend.": "'with my friend' = 친구와 함께. 누구와 하는지 장소 뒤에 붙여요",
+  "I have called my mom from the station.": "'from the station' = 역에서. 어디서 하는지 문장 끝에 붙여요",
+  "I have called my mom from the station with my teacher.": "'with my teacher' = 선생님과 함께. 누구와 하는지 장소 뒤에 붙여요",
+  "I can meet my friend.": "할 수 있다고 말할 때 (can + 동사)",
+  "I have to meet my friend.": "꼭 해야 하는 일을 말할 때 (have to + 동사)",
+  "I want to meet my friend.": "하고 싶은 일을 말할 때 (want to + 동사)",
+  "I had to meet my friend.": "해야 했던 일을 말할 때 (had to = have to의 과거)",
+  "I can meet my friend because I am free.": "'because I am free' = 시간이 있어서. 이유를 말할 때 because 뒤에 문장을 붙여요",
+  "I have to meet my friend because she needs help.": "'because she needs help' = 그 친구가 도움이 필요해서. 이유를 말할 때 because 뒤에 문장을 붙여요",
+  "I want to meet my friend because it is her birthday.": "'because it is her birthday' = 친구 생일이라서. 이유를 말할 때 because 뒤에 문장을 붙여요",
+  "I want to meet my friend at the cafe because it is her birthday.": "'at the cafe' = 카페에서. 이유 앞에 장소·때를 끼워 문장을 더 길게 만들어요",
+  "I can take a shower.": "할 수 있다고 말할 때 (can + 동사)",
+  "I have to take a shower.": "꼭 해야 하는 일을 말할 때 (have to + 동사)",
+  "I want to take a shower.": "하고 싶은 일을 말할 때 (want to + 동사)",
+  "I had to take a shower.": "해야 했던 일을 말할 때 (had to = have to의 과거)",
+  "I can take a shower because the water is hot.": "'because the water is hot' = 물이 뜨거워서. 이유를 말할 때 because 뒤에 문장을 붙여요",
+  "I have to take a shower because I am sweaty.": "'because I am sweaty' = 땀이 나서. 이유를 말할 때 because 뒤에 문장을 붙여요",
+  "I want to take a shower because I feel sticky.": "'because I feel sticky' = 몸이 끈적해서. 이유를 말할 때 because 뒤에 문장을 붙여요",
+  "I want to take a shower after dinner because I feel sticky.": "'after dinner' = 저녁 먹은 뒤에. 이유 앞에 장소·때를 끼워 문장을 더 길게 만들어요",
+  "I can take the bus.": "할 수 있다고 말할 때 (can + 동사)",
+  "I have to take the bus.": "꼭 해야 하는 일을 말할 때 (have to + 동사)",
+  "I want to take the bus.": "하고 싶은 일을 말할 때 (want to + 동사)",
+  "I had to take the bus.": "해야 했던 일을 말할 때 (had to = have to의 과거)",
+  "I can take the bus because there is a bus stop nearby.": "'because there is a bus stop nearby' = 근처에 버스 정류장이 있어서. 이유를 말할 때 because 뒤에 문장을 붙여요",
+  "I have to take the bus because my car is broken.": "'because my car is broken' = 차가 고장 나서. 이유를 말할 때 because 뒤에 문장을 붙여요",
+  "I want to take the bus because it is cheap.": "'because it is cheap' = 값이 싸서. 이유를 말할 때 because 뒤에 문장을 붙여요",
+  "I want to take the bus to the airport because it is cheap.": "'to the airport' = 공항까지. 이유 앞에 장소·때를 끼워 문장을 더 길게 만들어요",
+  "I can read a book.": "할 수 있다고 말할 때 (can + 동사)",
+  "I have to read a book.": "꼭 해야 하는 일을 말할 때 (have to + 동사)",
+  "I want to read a book.": "하고 싶은 일을 말할 때 (want to + 동사)",
+  "I had to read a book.": "해야 했던 일을 말할 때 (had to = have to의 과거)",
+  "I can read a book because I have time.": "'because I have time' = 여유가 있어서. 이유를 말할 때 because 뒤에 문장을 붙여요",
+  "I have to read a book because I have a book report.": "'because I have a book report' = 독후감 숙제가 있어서. 이유를 말할 때 because 뒤에 문장을 붙여요",
+  "I want to read a book because the story is interesting.": "'because the story is interesting' = 이야기가 재미있어서. 이유를 말할 때 because 뒤에 문장을 붙여요",
+  "I want to read a book in bed because the story is interesting.": "'in bed' = 침대에서. 이유 앞에 장소·때를 끼워 문장을 더 길게 만들어요",
+  "I can play soccer.": "할 수 있다고 말할 때 (can + 동사)",
+  "I have to play soccer.": "꼭 해야 하는 일을 말할 때 (have to + 동사)",
+  "I want to play soccer.": "하고 싶은 일을 말할 때 (want to + 동사)",
+  "I had to play soccer.": "해야 했던 일을 말할 때 (had to = have to의 과거)",
+  "I can play soccer because the weather is nice.": "'because the weather is nice' = 날씨가 좋아서. 이유를 말할 때 because 뒤에 문장을 붙여요",
+  "I have to play soccer because we have a game.": "'because we have a game' = 경기가 있어서. 이유를 말할 때 because 뒤에 문장을 붙여요",
+  "I want to play soccer because it is fun.": "'because it is fun' = 재미있어서. 이유를 말할 때 because 뒤에 문장을 붙여요",
+  "I want to play soccer with my team because it is fun.": "'with my team' = 우리 팀과. 이유 앞에 장소·때를 끼워 문장을 더 길게 만들어요",
+  "I can go shopping.": "할 수 있다고 말할 때 (can + 동사)",
+  "I have to go shopping.": "꼭 해야 하는 일을 말할 때 (have to + 동사)",
+  "I want to go shopping.": "하고 싶은 일을 말할 때 (want to + 동사)",
+  "I had to go shopping.": "해야 했던 일을 말할 때 (had to = have to의 과거)",
+  "I can go shopping because I have money.": "'because I have money' = 돈이 있어서. 이유를 말할 때 because 뒤에 문장을 붙여요",
+  "I have to go shopping because I need new shoes.": "'because I need new shoes' = 새 신발이 필요해서. 이유를 말할 때 because 뒤에 문장을 붙여요",
+  "I want to go shopping because there is a sale.": "'because there is a sale' = 세일을 해서. 이유를 말할 때 because 뒤에 문장을 붙여요",
+  "I want to go shopping on Saturday because there is a sale.": "'on Saturday' = 토요일에. 이유 앞에 장소·때를 끼워 문장을 더 길게 만들어요"
 };
 /* [v3.0] 정답 칸을 문제 바로 아래(화면 위쪽)로 옮기고, 남은 조각·다시/확인·모르겠어요는 숨김 */
 function fbToTop(){
@@ -1586,7 +1737,7 @@ function arrangeHTML(q, showAns){
   if(q.type === 'sent_en' || q.type === 'sent_ko'){
     const ko = q.type === 'sent_ko';
     return `<div class="qbox"><div class="qkind">${ko ? '영어 문장을 우리말로 풀어 보세요 <span class="muted">(조사는 자동)</span>' : '우리말에 맞게 영어 문장을 만들어 보세요'}</div>
-      <div class="qmid">${esc(q.prompt)}</div>${ko?`<button class="qsay" onclick="say('${jsq(q.prompt)}')">🔊</button>`:''}
+      <div class="qmid">${esc(q.prompt)}</div>${addLine(q)}${ko?`<button class="qsay" onclick="say('${jsq(q.prompt)}')">🔊</button>`:''}
       <div class="slot" id="slot"></div>${ko?'<div class="kopre" id="koPre"></div>':''}
       ${showAns?`<div class="muted" style="color:#b07a00">정답: ${esc(ko ? q.answer.split('|').join(' ') : q.answer)}</div>`:''}
       ${q.tokens.length > q.need && !strictQ(q) ? `<p class="muted">⚠️ 필요 없는 조각도 섞여 있어요 (${q.need}개만 써요)</p>` : ''}</div><!-- [v4.0] 레벨 3 이상은 안내 없음 -->
@@ -1647,7 +1798,7 @@ function checkArrange(){
 /* 따라 말하기 */
 function speakHTML(q, showAns){
   return `<div class="qbox"><div class="qkind">듣고 따라 말해 보세요</div>${q.emo?`<div class="qemo" style="font-size:48px">${q.emo}</div>`:''}
-    <div class="qbig">${esc(q.en)}</div>${q.ipa?`<div class="ipa" id="qIpa" style="visibility:hidden">[${esc(q.ipa)}]</div>`:''}<div class="muted">${esc(q.ko)}</div>
+    <div class="qbig">${esc(q.en)}</div>${q.ipa?`<div class="ipa" id="qIpa" style="visibility:hidden">[${esc(q.ipa)}]</div>`:''}<div class="muted">${esc(q.ko)}</div>${addLine(q)}
     <button class="qsay" onclick="qSay()">🔊 듣기</button></div>
     <div style="text-align:center"><button class="micbig" id="micBig" onclick="speakTap()">🎤</button><p class="muted" id="spkMsg">마이크를 누르고 말해요</p>
     <button class="chip" style="margin-bottom:6px" onclick="openCheck(true)">🩺 마이크 점검</button><br>
