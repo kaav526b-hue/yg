@@ -458,6 +458,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
 <script>
 /***************************************************************
  * 영공도전_jw 앱 화면
+ * VERSION 5.0   [v5.0] 네이버 앱 안 창도 '🔇 소리가 안 나요' 안내, 버튼은 '🌐 삼성 인터넷으로 열기', '그냥 쓸게요'를 누른 기계는 다시 안 물음
  * VERSION 4.9   [v4.9] 🧱 문장 만들기 코스(문장 1~3 = 레벨 12~14): 늘린 문장 문제에 '앞 문장 + ➕ 붙일 말' 칸, 💡 이럴 때 써요 144개, 관리자 레벨 고르기에 문장 1~3 — 서버 v3.9와 짝
  * VERSION 4.8   [v4.8] 서버 주소를 앱에 미리 넣어 둠: 사이트 주소로 그냥 열어도 주소 칸 없이 바로 이름 넣는 화면
  * VERSION 4.7   [v4.7] 아빠가 [지급 완료]를 누른 선물이 새로 있으면 아이가 앱을 켤 때 '🎁 아빠가 선물을 줬어요!' 창 한 번
@@ -499,7 +500,8 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
  ***************************************************************/
 
 // ===================== 조절할 값 =====================
-const VERSION = '4.9';            // 앱 화면 버전 [v4.9]
+const VERSION = '5.0';            // 앱 화면 버전 [v5.0]
+const WV_SILENT_UA = /NAVER\(inapp/i;   // [v5.0] 소리가 안 나는 앱 안 창 알아보는 글자 (네이버 앱). 고래(Whale) 브라우저는 소리 잘 나서 안 넣음
 const DEFAULT_SERVER = 'https://script.google.com/macros/s/AKfycbyxg6fj8Jv96bb2H18uXwQ4v12fnr1goDyoLRfg_bB2gFw_qN2WpFXqlNapBOXzZVse3w/exec';   // [v4.8] 기본 서버 주소 (폰에 저장된 주소가 없으면 이걸 씀)
 const PCT_TOAST_MS = 1600;        // [v2.7] 답할 때 달성률 ▲▼ 보여 주는 시간(ms)
 const LONG_TEXT = 'Good morning, everyone. My name is Jiwoo, and I am learning English every day. After school, I like to read books and play soccer with my friends.';   // [v2.6] 점검 화면 긴 문장 (속도 확인용)
@@ -811,20 +813,23 @@ function devInfo(){
 }
 
 /* [v2.5] 텔레그램·카톡 안 창(웹뷰)은 읽어 주기가 없어요 → 크롬으로 열기 안내 */
-function inWebView(){ return !('speechSynthesis' in window); }   // 읽어 주기 기능이 아예 없는 창만 (아이폰 카톡은 소리 잘 남)
-function openInBrowserUrl(){
+// [v5.0] 네이버 앱 안 창도 소리가 안 나요(읽어 주기가 있는 척만 함) → 같이 안내
+function inWebView(){ return !('speechSynthesis' in window) || WV_SILENT_UA.test(navigator.userAgent); }   // 읽어 주기 기능이 없는 창 + 네이버 앱 안 창 (아이폰 카톡은 소리 잘 남)
+function openInBrowserUrl(){   // [v5.0] 크롬 → 삼성 인터넷 (크롬은 바탕화면 바로가기가 안 돼요)
   const q = '?s=' + encodeURIComponent(SERVER);
-  if(/Android/i.test(navigator.userAgent)) return 'intent://' + location.host + location.pathname + q + '#Intent;scheme=https;package=com.android.chrome;end';
-  return location.origin + location.pathname + q;
+  const web = location.origin + location.pathname + q;
+  if(/Android/i.test(navigator.userAgent)) return 'intent://' + location.host + location.pathname + q + '#Intent;scheme=https;package=com.sec.android.app.sbrowser;S.browser_fallback_url=' + encodeURIComponent(web) + ';end';
+  return web;
 }
 function webviewNotice(){
   if(!inWebView()) return;
-  sset('yg_wv_seen', '1');
+  if(sget('yg_wv_skip') === '1') return;   // [v5.0] '그냥 쓸게요'를 누른 기계는 다시 안 물어요
+  const android = /Android/i.test(navigator.userAgent);
   modal(`<div style="font-size:48px">🔇</div><h2>이 창에서는 소리가 안 나요</h2>
-    <p class="muted">이 창(텔레그램 안 등)은 영어를 읽어 주는 기능이 없어요.<br>크롬이나 삼성 인터넷으로 열어 주세요.</p>
-    <a class="btn" style="text-align:center;text-decoration:none" href="${openInBrowserUrl()}" onclick="dlog('webview-open','')">🌐 크롬으로 열기</a>
-    <p class="muted">안 되면 오른쪽 위 ⋮ → "다른 브라우저로 열기"를 눌러요.</p>
-    <button class="btn gray" onclick="closeModal()">그냥 쓸게요</button>`);
+    <p class="muted">이 창(네이버·텔레그램 안 등)은 영어를 읽어 주지 못해요.<br>삼성 인터넷으로 열어 주세요.</p>
+    ${android ? `<a class="btn" style="text-align:center;text-decoration:none" href="${openInBrowserUrl()}" onclick="dlog('webview-open','')">🌐 삼성 인터넷으로 열기</a>` : ''}
+    <p class="muted">${android ? '안 되면 ' : ''}오른쪽 위(또는 아래) ⋮ → "다른 브라우저로 열기"를 눌러요.</p>
+    <button class="btn gray" onclick="sset('yg_wv_skip','1');closeModal();dlog('webview-skip','')">그냥 쓸게요</button>`);
   dlog('webview', navigator.userAgent.slice(0,120));
 }
 
