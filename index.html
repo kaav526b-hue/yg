@@ -458,6 +458,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
 <script>
 /***************************************************************
  * 영공도전_jw 앱 화면
+ * VERSION 5.1   [v5.1] ☑️ 골라 섞기 공부 모드: 설정·관리자창 공부 모드에 '☑️ 골라 섞기' → 코스 체크 칸(학교 단어·토익·회화·문장 만들기) + 저장(2개 이상=골라 섞기, 1개=그 코스만, 0개=저장 안 됨), 지금 모드 표시에 고른 이름 — 서버 v4.0과 짝
  * VERSION 5.0   [v5.0] 네이버 앱 안 창도 '🔇 소리가 안 나요' 안내, 버튼은 '🌐 삼성 인터넷으로 열기', '그냥 쓸게요'를 누른 기계는 다시 안 물음
  * VERSION 4.9   [v4.9] 🧱 문장 만들기 코스(문장 1~3 = 레벨 12~14): 늘린 문장 문제에 '앞 문장 + ➕ 붙일 말' 칸, 💡 이럴 때 써요 144개, 관리자 레벨 고르기에 문장 1~3 — 서버 v3.9와 짝
  * VERSION 4.8   [v4.8] 서버 주소를 앱에 미리 넣어 둠: 사이트 주소로 그냥 열어도 주소 칸 없이 바로 이름 넣는 화면
@@ -500,7 +501,7 @@ textarea{font:inherit;width:100%;padding:10px;border:1px solid #cfd8e3;border-ra
  ***************************************************************/
 
 // ===================== 조절할 값 =====================
-const VERSION = '5.0';            // 앱 화면 버전 [v5.0]
+const VERSION = '5.1';           // 앱 화면 버전 [v5.0]
 const WV_SILENT_UA = /NAVER\(inapp/i;   // [v5.0] 소리가 안 나는 앱 안 창 알아보는 글자 (네이버 앱). 고래(Whale) 브라우저는 소리 잘 나서 안 넣음
 const DEFAULT_SERVER = 'https://script.google.com/macros/s/AKfycbyxg6fj8Jv96bb2H18uXwQ4v12fnr1goDyoLRfg_bB2gFw_qN2WpFXqlNapBOXzZVse3w/exec';   // [v4.8] 기본 서버 주소 (폰에 저장된 주소가 없으면 이걸 씀)
 const PCT_TOAST_MS = 1600;        // [v2.7] 답할 때 달성률 ▲▼ 보여 주는 시간(ms)
@@ -1188,7 +1189,7 @@ function renderHome(){
     <div style="font-size:40px">📝</div><b style="font-size:18px">🎉 그림판 완성! ${esc(LV(L.lv))} 레벨 테스트 도전!</b>
     <p class="muted" style="margin:6px 0">${L.board.prize ? '통과하면 🎁 선물: <b>'+esc(L.board.prize)+'</b>' : '통과하면 선물을 받아요'}</p>${t}</div>` : '';
   if(topT) document.getElementById('testArea').innerHTML = '';
-  document.getElementById('levelList').innerHTML = `<p class="muted" style="margin:4px 0">공부 모드: <b>${esc((ST.modes||{})[ST.mode]||'')}</b> <button class="chip" onclick="openSettings()">바꾸기</button></p>` + myLevels(ST.levels).map(l=>   // [v2.4]
+  document.getElementById('levelList').innerHTML = `<p class="muted" style="margin:4px 0">공부 모드: <b>${esc(ST.modeLabel||(ST.modes||{})[ST.mode]||'')}</b> <button class="chip" onclick="openSettings()">바꾸기</button></p>` + myLevels(ST.levels).map(l=>   // [v2.4]
     `<div class="lvrow ${l.open?'':'lock'}"><div class="top"><span>${l.passed?'🏆':l.open?'🔓':'🔒'} ${LV(l.lv)} · ${esc(l.name)}</span><span class="muted">외움 ${l.learned}/${l.total}</span></div></div>`).join('');
 }
 function openBoardModal(lv){
@@ -1204,7 +1205,7 @@ function openSettings(){
     <p class="muted">하루 공부량 (문제 수)</p>
     <div class="row" style="flex-wrap:wrap">${ST.goalChoices.map(g=>`<button class="btn small ${g===ST.goal?'':'gray'}" style="flex:0 0 30%" onclick="setGoal(${g})">${g}</button>`).join('')}</div>
     <p class="muted">공부 모드</p>
-    <div class="row" style="flex-wrap:wrap">${Object.keys(ST.modes||{}).map(m=>`<button class="btn small ${m===ST.mode?'':'gray'}" style="flex:1 1 30%" onclick="setMode('${m}')">${esc(ST.modes[m])}</button>`).join('')}</div>
+    <div class="row" style="flex-wrap:wrap">${Object.keys(ST.modes||{}).map(m=>`<button class="btn small ${m===ST.mode?'':'gray'}" style="flex:1 1 30%" onclick="${m==='pick'?`openPick('me')`:`setMode('${m}')`}">${esc(ST.modes[m])}</button>`).join('')}</div>   <!-- [v5.1] 골라 섞기는 체크 칸을 먼저 열어요 -->
     <button class="btn gray small" onclick="closeModal();openCheck()">🩺 점검 (소리·마이크 문제 찾기)</button>
     <button class="btn" onclick="closeModal()">닫기</button>
     <p class="muted">앱 v${VERSION}</p>`);
@@ -1214,6 +1215,29 @@ function setGoal(g){   // [v2.2] 누르는 즉시 바뀌고, 저장은 뒤에서
   ST.goal = g; closeModal(); renderHome(); toast('하루 '+g+'문제로 바꿨어요');
   api('setGoal',{goal:g},{quiet:true}).then(j=>{ ST = Object.assign(ST, j); if(document.getElementById('tabStudy').classList.contains('on')) renderHome(); })
     .catch(e=>{ ST.goal = old; renderHome(); toast('저장 실패: '+e.message); });
+}
+
+/* [v5.1] ☑️ 골라 섞기: 코스 체크 칸 + 저장. who = 'me'(설정) / 'dad'(관리자창) */
+function pickNow(who){   // 지금 체크해 둘 코스: 골라 섞기면 고른 목록, 아니면 지금 모드의 코스(섞기는 전부)
+  const o = (who==='dad' && DAD && DAD.user) ? DAD.user : ST;
+  if(Array.isArray(o.pickCourses) && o.pickCourses.length) return o.pickCourses;
+  return o.courses || [];
+}
+function openPick(who){
+  const order = ((who==='dad' && DAD) ? DAD.pickOrder : ST.pickOrder) || ['daily','toeic','talk','build'];
+  const modes = ((who==='dad' && DAD) ? DAD.modes : ST.modes) || {};
+  const cur = pickNow(who);
+  modal(`<h2>☑️ 골라 섞기</h2><p class="muted">공부할 코스를 고르세요 (2개 이상 = 골고루 섞기, 1개 = 그 코스만)</p>
+    ${order.map(c=>`<label style="display:flex;align-items:center;gap:10px;padding:10px 4px;font-size:17px"><input type="checkbox" class="pickChk" value="${c}" ${cur.indexOf(c)>=0?'checked':''} style="width:22px;height:22px"> ${esc(modes[c]||c)}</label>`).join('')}
+    <div class="row"><button class="btn gray" onclick="closeModal()">취소</button><button class="btn" onclick="savePick('${who}')">저장</button></div>`);
+}
+async function savePick(who){
+  const list = Array.from(document.querySelectorAll('.pickChk')).filter(x=>x.checked).map(x=>x.value);
+  if(!list.length){ toast('코스를 하나 이상 골라 주세요'); return; }   // 0개는 저장 안 됨
+  closeModal();
+  if(who==='dad'){ const j = await dadCall('dadSetMode', {mode:'pick', courses:list}); if(j) toast('공부 모드를 저장했어요'); return; }
+  try{ const j = await api('setMode', {mode:'pick', courses:list}); ST = Object.assign(ST, j); renderAdminBar(); showTab('tabStudy'); toast('공부 모드: '+esc(ST.modeLabel||ST.modes[ST.mode])); }
+  catch(e){ toast('저장 실패: '+e.message); }
 }
 
 /* [v2.4] 공부 모드 바꾸기 */
@@ -2540,8 +2564,8 @@ function renderDad(j){
      ${dadHistory(u)}
      ${dadProgress(u)}
      ${dadBoard(u)}
-     <p class="muted" style="margin:6px 0 2px">공부 모드</p>
-     <div class="row" style="flex-wrap:wrap" id="dadModes">${Object.keys(j.modes||{}).map(m=>`<button class="btn small ${m===u.mode?'':'gray'}" style="flex:1 1 30%" onclick="dadCall('dadSetMode',{mode:'${m}'})">${esc(j.modes[m])}</button>`).join('')}</div>`;   // [v2.4]
+     <p class="muted" style="margin:6px 0 2px">공부 모드: <b>${esc(u.modeLabel||(j.modes||{})[u.mode]||'')}</b></p>
+     <div class="row" style="flex-wrap:wrap" id="dadModes">${Object.keys(j.modes||{}).map(m=>`<button class="btn small ${m===u.mode?'':'gray'}" style="flex:1 1 30%" onclick="${m==='pick'?`openPick('dad')`:`dadCall('dadSetMode',{mode:'${m}'})`}">${esc(j.modes[m])}</button>`).join('')}</div>`;   // [v2.4]
   // 그림판 설정 (입력 중이면 새로고침으로 지우지 않기)
   const act = document.activeElement;
   if(!(act && act.closest && act.closest('#dadBoards'))){
